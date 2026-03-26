@@ -1,0 +1,176 @@
+const products = [
+  // ─── SKINCARE ─────────────────────────────────────────────
+  {
+    name: "Retinol Renewal Serum",
+    description:
+      "Advanced anti-aging serum with 0.5% pure retinol encapsulated in micro-spheres for controlled release. Reduces fine lines, uneven texture, and hyperpigmentation with continued use.",
+    price: 348600,   // ₹3,486
+    category: "skin",
+    concerns: ["aging", "wrinkles", "hyperpigmentation"],
+    ingredients: ["Retinol 0.5%", "Hyaluronic Acid", "Vitamin E", "Squalane"],
+    stockQuantity: 15,
+    safetyThreshold: 5,
+    routineTime: "PM",
+    subscriptionAvailable: true,
+    // Download & add: https://images.pexels.com/photos/4041392/pexels-photo-4041392.jpeg
+    image: "https://images.pexels.com/photos/4041392/pexels-photo-4041392.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+  {
+    name: "Vitamin C Brightening Drops",
+    description:
+      "15% L-Ascorbic Acid brightening formula stabilised with Ferulic Acid. Fades dark spots, evens skin tone, and protects against environmental stressors.",
+    price: 315000,   // ₹3,150
+    category: "skin",
+    concerns: ["dark spots", "dullness", "uneven tone"],
+    ingredients: ["Vitamin C 15%", "Ferulic Acid", "Vitamin E", "Niacinamide"],
+    stockQuantity: 25,
+    safetyThreshold: 5,
+    routineTime: "AM",
+    subscriptionAvailable: true,
+    image: "https://images.pexels.com/photos/5069432/pexels-photo-5069432.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+  {
+    name: "Hyaluronic Acid Moisturiser",
+    description:
+      "Lightweight 72-hour hydration gel-cream with three molecular weights of Hyaluronic Acid. Strengthens the skin barrier with Ceramides and Squalane.",
+    price: 240000,   // ₹2,400
+    category: "skin",
+    concerns: ["dryness", "dehydration", "dull skin"],
+    ingredients: ["Hyaluronic Acid", "Ceramides", "Squalane", "Panthenol"],
+    stockQuantity: 45,
+    safetyThreshold: 10,
+    routineTime: "both",
+    subscriptionAvailable: true,
+    image: "https://images.pexels.com/photos/6621462/pexels-photo-6621462.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+  {
+    name: "Salicylic Acid BHA Cleanser",
+    description:
+      "2% Salicylic Acid (BHA) face wash that unclogs pores, controls sebum, and prevents breakouts. Gentle enough for daily use; leaves skin clear without over-drying.",
+    price: 199000,   // ₹1,990
+    category: "skin",
+    concerns: ["acne", "oily skin", "blackheads", "enlarged pores"],
+    ingredients: ["Salicylic Acid 2%", "Niacinamide", "Aloe Vera", "Green Tea Extract"],
+    stockQuantity: 0,         // Out of stock demo
+    safetyThreshold: 5,
+    routineTime: "both",
+    subscriptionAvailable: true,
+    image: "https://images.pexels.com/photos/4046316/pexels-photo-4046316.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+  {
+    name: "Niacinamide 10% Pore Serum",
+    description:
+      "High-strength Niacinamide serum that minimises pores, controls oil production, and reduces redness. Pairs well with moisturiser AM or PM.",
+    price: 179000,   // ₹1,790
+    category: "skin",
+    concerns: ["enlarged pores", "oily skin", "redness"],
+    ingredients: ["Niacinamide 10%", "Zinc PCA", "Hyaluronic Acid"],
+    stockQuantity: 38,
+    safetyThreshold: 8,
+    routineTime: "both",
+    subscriptionAvailable: true,
+    image: "https://images.pexels.com/photos/5069609/pexels-photo-5069609.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+  {
+    name: "SPF 50 PA++++ Sunscreen Fluid",
+    description:
+      "Invisible, non-greasy broad-spectrum sunscreen. Protects against UVA/UVB, blue light, and pollution. Doubles as a primer under makeup.",
+    price: 159000,   // ₹1,590
+    category: "skin",
+    concerns: ["sun damage", "anti-aging", "pigmentation"],
+    ingredients: ["Tinosorb S", "Uvinul A Plus", "Niacinamide", "Aloe Vera"],
+    stockQuantity: 60,
+    safetyThreshold: 10,
+    routineTime: "AM",
+    subscriptionAvailable: true,
+    image: "https://images.pexels.com/photos/3762875/pexels-photo-3762875.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+  {
+    name: "AHA Glycolic Acid Exfoliator",
+    description:
+      "10% Glycolic Acid chemical exfoliant that removes dead skin cells, refines texture, and boosts cell turnover. Use 2–3x per week in PM routine.",
+    price: 219000,   // ₹2,190
+    category: "skin",
+    concerns: ["dull skin", "rough texture", "acne marks"],
+    ingredients: ["Glycolic Acid 10%", "Lactic Acid", "Aloe Vera"],
+    stockQuantity: 22,
+    safetyThreshold: 5,
+    routineTime: "PM",
+    subscriptionAvailable: false,
+    image: "https://images.pexels.com/photos/4041391/pexels-photo-4041391.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+  {
+    name: "Peptide Anti-Aging Eye Cream",
+    description:
+      "Targets crow's feet, dark circles, and puffiness with a blend of Matrixyl 3000 peptides and Caffeine. Lightweight gel texture absorbs instantly.",
+    price: 289000,   // ₹2,890
+    category: "skin",
+    concerns: ["dark circles", "puffiness", "fine lines"],
+    ingredients: ["Matrixyl 3000", "Caffeine", "Hyaluronic Acid", "Vitamin K"],
+    stockQuantity: 18,
+    safetyThreshold: 5,
+    routineTime: "both",
+    subscriptionAvailable: true,
+    image: "https://images.pexels.com/photos/7005694/pexels-photo-7005694.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+
+  // ─── HAIRCARE ─────────────────────────────────────────────
+  {
+    name: "Biotin Hair Growth Serum",
+    description:
+      "Stimulates follicles and reduces hair fall with clinical-grade Biotin, Caffeine, and Copper Peptides. Visible results in 8 weeks.",
+    price: 290000,   // ₹2,900
+    category: "hair",
+    concerns: ["hair fall", "slow growth", "thinning"],
+    ingredients: ["Biotin", "Caffeine", "Copper Peptides", "Redensyl"],
+    stockQuantity: 30,
+    safetyThreshold: 8,
+    routineTime: "both",
+    subscriptionAvailable: true,
+    image: "https://images.pexels.com/photos/6620852/pexels-photo-6620852.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+  {
+    name: "Keratin Repair Hair Mask",
+    description:
+      "Intensive weekly deep-conditioning treatment that restores strength and shine to chemically treated or heat-damaged hair.",
+    price: 265000,   // ₹2,650
+    category: "hair",
+    concerns: ["damage", "dryness", "frizz", "breakage"],
+    ingredients: ["Keratin", "Argan Oil", "Hydrolysed Protein", "Shea Butter"],
+    stockQuantity: 20,
+    safetyThreshold: 5,
+    routineTime: "both",
+    subscriptionAvailable: true,
+    image: "https://images.pexels.com/photos/6621339/pexels-photo-6621339.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+  {
+    name: "Scalp Detox Exfoliating Scrub",
+    description:
+      "Removes product buildup, excess sebum, and flakiness with Salicylic Acid and Zinc. Preps the scalp for better absorption of hair serums.",
+    price: 185000,   // ₹1,850
+    category: "hair",
+    concerns: ["dandruff", "oily scalp", "buildup"],
+    ingredients: ["Salicylic Acid", "Zinc Pyrithione", "Peppermint Oil", "Kaolin"],
+    stockQuantity: 35,
+    safetyThreshold: 7,
+    routineTime: "both",
+    subscriptionAvailable: false,
+    image: "https://images.pexels.com/photos/3993454/pexels-photo-3993454.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+  {
+    name: "Argan Oil Shine & Frizz Serum",
+    description:
+      "Lightweight leave-in serum that tames frizz, adds mirror-like shine, and protects against heat up to 230°C. A few drops go a long way.",
+    price: 225000,   // ₹2,250
+    category: "hair",
+    concerns: ["frizz", "dullness", "heat damage"],
+    ingredients: ["Argan Oil", "Cyclomethicone", "Vitamin E", "Keratin"],
+    stockQuantity: 28,
+    safetyThreshold: 6,
+    routineTime: "both",
+    subscriptionAvailable: true,
+    image: "https://images.pexels.com/photos/7755645/pexels-photo-7755645.jpeg?auto=compress&cs=tinysrgb&w=400",
+  },
+];
+
+module.exports = products;

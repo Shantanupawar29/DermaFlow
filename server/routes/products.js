@@ -1,14 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
-const auth = require('../middleware/auth');
 
-router.get('/', auth, async (req, res) => {
+// Get all products with optional category filter
+router.get('/', async (req, res) => {
   try {
-    const products = await Product.find();
+    const { category } = req.query;
+    const filter = category && category !== 'all' ? { category } : {};
+    const products = await Product.find(filter);
     res.json(products);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get single product by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 

@@ -1,69 +1,204 @@
-import { useEffect, useState } from 'react';
-import { getProducts } from '../services/api';
-import { useCart } from '../context/CartContext';
-import { Link } from 'react-router-dom';
- 
-export default function Products() {
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Filter, ChevronDown } from 'lucide-react';
+import ProductCard from '../components/ProductCard';
+import axios from 'axios';
+
+const Products = () => {
   const [products, setProducts] = useState([]);
-  const [category, setCategory] = useState('all');
-  const [loading,  setLoading]  = useState(true);
-  const { addToCart } = useCart();
- 
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    category: '',
+    minPrice: '',
+    maxPrice: '',
+    sort: 'newest'
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setFilters({
+      category: params.get('category') || '',
+      minPrice: params.get('minPrice') || '',
+      maxPrice: params.get('maxPrice') || '',
+      sort: params.get('sort') || 'newest',
+      search: params.get('search') || ''
+    });
+  }, [location.search]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [filters]);
+
+  const fetchProducts = async () => {
     setLoading(true);
-    getProducts(category === 'all' ? undefined : category)
-      .then(res => setProducts(res.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [category]);
- 
+    try {
+      const params = new URLSearchParams();
+      if (filters.category) params.append('category', filters.category);
+      if (filters.minPrice) params.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+      if (filters.sort) params.append('sort', filters.sort);
+      if (filters.search) params.append('search', filters.search);
+      
+      const response = await axios.get(`http://localhost:5000/api/products?${params}`);
+      setProducts(response.data.products);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateFilter = (key, value) => {
+    const newFilters = { ...filters, [key]: value };
+    setFilters(newFilters);
+    
+    const params = new URLSearchParams();
+    Object.entries(newFilters).forEach(([k, v]) => {
+      if (v) params.append(k, v);
+    });
+    navigate(`/products?${params}`);
+  };
+
+  const categories = ['Serums', 'Moisturizers', 'Cleansers', 'Sunscreens', 'Treatments', 'Haircare'];
+
   return (
-    <div className='container mx-auto px-4 py-10'>
-      <h1 className='text-3xl font-bold mb-6'>Our Products</h1>
- 
-      {/* Category filter */}
-      <div className='flex gap-3 mb-8'>
-        {['all','skin','hair'].map(c => (
-          <button key={c} onClick={() => setCategory(c)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors
-              ${category === c ? 'bg-rose-DEFAULT text-white border-rose-DEFAULT' : 'border-gray-300 hover:border-rose-DEFAULT'}`}>
-            {c.charAt(0).toUpperCase() + c.slice(1)}
-          </button>
-        ))}
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-display font-bold text-foreground">Our Products</h1>
+        <p className="text-muted-foreground mt-2">Discover science-backed skincare for every concern</p>
       </div>
- 
-      {loading ? (<p>Loading...</p>) : (
-        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
-          {products.map(product => (
-            <div key={product._id} className='bg-white rounded-xl border p-4 hover:shadow-md transition'>
-              <div className='h-40 bg-rose-light rounded-lg mb-4 flex items-center justify-center text-rose-DEFAULT text-sm'>
-                {product.name}
+
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Filters Sidebar - Desktop */}
+        <div className="hidden lg:block w-64 space-y-6">
+          <div>
+            <h3 className="font-semibold mb-3">Categories</h3>
+            <div className="space-y-2">
+              <button 
+                onClick={() => updateFilter('category', '')}
+                className={`block text-sm ${!filters.category ? 'text-maroon font-semibold' : 'text-gray-600'} hover:text-maroon`}
+              >
+                All Products
+              </button>
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => updateFilter('category', cat)}
+                  className={`block text-sm ${filters.category === cat ? 'text-maroon font-semibold' : 'text-gray-600'} hover:text-maroon`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-semibold mb-3">Price Range</h3>
+            <div className="space-y-2">
+              <input
+                type="number"
+                placeholder="Min Price"
+                value={filters.minPrice}
+                onChange={(e) => updateFilter('minPrice', e.target.value)}
+                className="w-full border border-cream-dark rounded-lg p-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Max Price"
+                value={filters.maxPrice}
+                onChange={(e) => updateFilter('maxPrice', e.target.value)}
+                className="w-full border border-cream-dark rounded-lg p-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-semibold mb-3">Sort By</h3>
+            <select
+              value={filters.sort}
+              onChange={(e) => updateFilter('sort', e.target.value)}
+              className="w-full border border-cream-dark rounded-lg p-2 text-sm"
+            >
+              <option value="newest">Newest First</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="rating">Highest Rated</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Mobile Filter Button */}
+        <div className="lg:hidden">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="w-full bg-cream text-maroon py-2 rounded-lg flex items-center justify-center gap-2 mb-4"
+          >
+            <Filter size={18} /> Filters <ChevronDown size={18} className={`transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {showFilters && (
+            <div className="bg-white rounded-lg shadow p-4 mb-6 space-y-4">
+              {/* Mobile filters - same as desktop but stacked */}
+              <div>
+                <h3 className="font-semibold mb-2">Categories</h3>
+                <select
+                  value={filters.category}
+                  onChange={(e) => updateFilter('category', e.target.value)}
+                  className="w-full border border-cream-dark rounded-lg p-2"
+                >
+                  <option value="">All Products</option>
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
-              <h3 className='font-semibold text-gray-900'>{product.name}</h3>
-              <p className='text-sm text-gray-500 mt-1 line-clamp-2'>{product.description}</p>
-              <div className='mt-3 flex items-center justify-between'>
-                <span className='font-bold text-rose-DEFAULT'>
-                  ₹{(product.price / 100).toFixed(2)}
-                </span>
-                <div className='flex gap-2'>
-                  <Link to={`/product/${product._id}`}
-                    className='text-xs border border-gray-300 px-3 py-1.5 rounded-lg hover:border-rose-DEFAULT'>
-                    View
-                  </Link>
-                  {product.stockQuantity > 0 ? (
-                    <button onClick={() => addToCart(product)}
-                      className='text-xs bg-rose-DEFAULT text-white px-3 py-1.5 rounded-lg hover:opacity-90'>
-                      Add to Cart
-                    </button>
-                  ) : (
-                    <span className='text-xs text-red-500 px-3 py-1.5'>Out of stock</span>
-                  )}
+              <div>
+                <h3 className="font-semibold mb-2">Price Range</h3>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={filters.minPrice}
+                    onChange={(e) => updateFilter('minPrice', e.target.value)}
+                    className="flex-1 border border-cream-dark rounded-lg p-2"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={filters.maxPrice}
+                    onChange={(e) => updateFilter('maxPrice', e.target.value)}
+                    className="flex-1 border border-cream-dark rounded-lg p-2"
+                  />
                 </div>
               </div>
             </div>
-          ))}
+          )}
         </div>
-      )}
+
+        {/* Products Grid */}
+        <div className="flex-1">
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-pulse text-maroon">Loading products...</div>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No products found</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {products.map(product => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default Products;

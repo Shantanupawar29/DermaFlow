@@ -1,48 +1,48 @@
-import { Link } from "react-router-dom";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 
-export default function Footer() {
+const Footer = () => {
   return (
-    <footer style={{ borderTop: "1px solid #e5e7eb", background: "#f9fafb", padding: "3rem 0" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 1rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "2rem" }}>
+    <footer className="border-t border-border bg-secondary/50 py-12">
+      <div className="container mx-auto grid gap-8 px-4 md:grid-cols-4">
         <div>
-          <div style={{ marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <span style={{ fontSize: "1.125rem" }}>✦</span>
-            <span style={{ fontWeight: "700", fontSize: "1.125rem", color: "#7B2D3C" }}>Derma Flow</span>
+          <div className="mb-3 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-maroon" />
+            <span className="font-display text-lg font-bold">Derma Flow</span>
           </div>
-          <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-            Personalized skincare &amp; haircare backed by dermatological science.
-          </p>
+          <p className="text-sm text-muted-foreground">Personalized skincare & haircare backed by dermatological science.</p>
         </div>
-
         <div>
-          <h4 style={{ marginBottom: "0.75rem", fontWeight: "600", fontSize: "0.875rem" }}>Shop</h4>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <Link to="/products" style={{ fontSize: "0.875rem", color: "#6b7280", textDecoration: "none" }}>All Products</Link>
-            <Link to="/quiz" style={{ fontSize: "0.875rem", color: "#6b7280", textDecoration: "none" }}>AI Diagnostic</Link>
+          <h4 className="mb-3 font-display text-sm font-semibold">Shop</h4>
+          <div className="flex flex-col gap-2">
+            <Link to="/products" className="text-sm text-muted-foreground hover:text-foreground">All Products</Link>
+            <Link to="/quiz" className="text-sm text-muted-foreground hover:text-foreground">AI Diagnostic</Link>
+            <Link to="/offers" className="text-sm text-muted-foreground hover:text-foreground">Offers</Link>
           </div>
         </div>
-
         <div>
-          <h4 style={{ marginBottom: "0.75rem", fontWeight: "600", fontSize: "0.875rem" }}>Account</h4>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <Link to="/login" style={{ fontSize: "0.875rem", color: "#6b7280", textDecoration: "none" }}>Login</Link>
-            <Link to="/register" style={{ fontSize: "0.875rem", color: "#6b7280", textDecoration: "none" }}>Register</Link>
-            <Link to="/dashboard" style={{ fontSize: "0.875rem", color: "#6b7280", textDecoration: "none" }}>Dashboard</Link>
+          <h4 className="mb-3 font-display text-sm font-semibold">Account</h4>
+          <div className="flex flex-col gap-2">
+            <Link to="/login" className="text-sm text-muted-foreground hover:text-foreground">Login</Link>
+            <Link to="/register" className="text-sm text-muted-foreground hover:text-foreground">Register</Link>
+            <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">Dashboard</Link>
           </div>
         </div>
-
         <div>
-          <h4 style={{ marginBottom: "0.75rem", fontWeight: "600", fontSize: "0.875rem" }}>Support</h4>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>help@dermaflow.com</span>
-            <span style={{ fontSize: "0.875rem", color: "#6b7280" }}>1-800-GLOW</span>
+          <h4 className="mb-3 font-display text-sm font-semibold">Support</h4>
+          <div className="flex flex-col gap-2">
+            <Link to="/help" className="text-sm text-muted-foreground hover:text-foreground">Help Center</Link>
+            <span className="text-sm text-muted-foreground">help@dermaflow.com</span>
+            <span className="text-sm text-muted-foreground">+91 123-456-7890</span>
           </div>
         </div>
       </div>
-
-      <div style={{ maxWidth: 1200, margin: "2rem auto 0", padding: "1.5rem 1rem 0", borderTop: "1px solid #e5e7eb", textAlign: "center", fontSize: "0.75rem", color: "#9ca3af" }}>
+      <div className="container mx-auto mt-8 border-t border-border px-4 pt-6 text-center text-xs text-muted-foreground">
         © 2026 Derma Flow. All rights reserved. Dermatologist Recommended.
       </div>
     </footer>
   );
-}
+};
+
+export default Footer;

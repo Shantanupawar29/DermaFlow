@@ -1,11 +1,77 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
- 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
- 
-body {
-  font-family: 'Inter', sans-serif;
-  @apply bg-gray-50 text-gray-900;
+
+@layer base {
+  :root {
+    --background: 30 50% 98%;
+    --foreground: 330 40% 15%;
+    --card: 30 50% 98%;
+    --card-foreground: 330 40% 15%;
+    --popover: 30 50% 98%;
+    --popover-foreground: 330 40% 15%;
+    --primary: 330 80% 20%;
+    --primary-foreground: 30 50% 98%;
+    --secondary: 30 30% 90%;
+    --secondary-foreground: 330 40% 15%;
+    --muted: 30 30% 90%;
+    --muted-foreground: 330 10% 40%;
+    --accent: 350 60% 70%;
+    --accent-foreground: 330 40% 15%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 30 50% 98%;
+    --border: 30 20% 85%;
+    --input: 30 20% 85%;
+    --ring: 330 80% 20%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 330 40% 10%;
+    --foreground: 30 50% 98%;
+    --card: 330 40% 12%;
+    --card-foreground: 30 50% 98%;
+    --popover: 330 40% 12%;
+    --popover-foreground: 30 50% 98%;
+    --primary: 350 60% 60%;
+    --primary-foreground: 330 40% 10%;
+    --secondary: 330 30% 20%;
+    --secondary-foreground: 30 50% 98%;
+    --muted: 330 30% 20%;
+    --muted-foreground: 30 20% 70%;
+    --accent: 350 60% 50%;
+    --accent-foreground: 30 50% 98%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 30 50% 98%;
+    --border: 330 30% 20%;
+    --input: 330 30% 20%;
+    --ring: 350 60% 60%;
+  }
 }
 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .text-gradient {
+    @apply bg-gradient-to-r from-maroon to-rose bg-clip-text text-transparent;
+  }
+  
+  .btn-primary {
+    @apply bg-maroon text-white px-6 py-2 rounded-lg hover:bg-maroon-light transition duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-cream text-maroon px-6 py-2 rounded-lg hover:bg-cream-dark transition duration-200;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-maroon text-maroon px-6 py-2 rounded-lg hover:bg-maroon hover:text-white transition duration-200;
+  }
+}

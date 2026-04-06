@@ -3,37 +3,124 @@ const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { protect } = require('../middleware/auth');
 
-// REGISTER
+const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+let sendWelcomeEmail = null;
+try { 
+  ({ sendWelcomeEmail } = require('../services/emailService')); 
+} catch(e) { console.log('Email service not available'); }
+
+// POST /api/auth/register
 router.post('/register', async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password)
+      return res.status(400).json({ message: 'Name, email and password are required' });
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+    const exists = await User.findOne({ email });
+    if (exists)
+      return res.status(400).json({ message: 'Email already registered' });
 
-  const user = new User({
-    email,
-    password: hashedPassword
-  });
+    const voucherCode = `WELCOME${Math.floor(Math.random() * 9000 + 1000)}`;
 
-  await user.save();
-  res.json({ message: "User registered" });
+    const user = await User.create({
+      name,
+      email,
+      password,
+      glowPoints: 50,
+      vouchers: [{
+        code: voucherCode,
+        discount: 15,
+        isUsed: false,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      }],
+    });
+
+    if (sendWelcomeEmail) {
+      sendWelcomeEmail(email, name).catch(e => console.log('Welcome email error:', e.message));
+    }
+
+    const token = signToken(user._id);
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    
+    res.status(201).json({ token, ...userResponse });
+  } catch (err) {
+    console.error('Register error:', err.message);
+    res.status(500).json({ message: err.message });
+  }
 });
 
-// LOGIN
+// POST /api/auth/login
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
+    if (!email || !password)
+      return res.status(400).json({ message: 'Email and password required' });
 
-  const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('+password');
+    if (!user)
+      return res.status(400).json({ message: 'Invalid email or password' });
 
-  if (!user) return res.status(400).json({ message: "User not found" });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
+      return res.status(400).json({ message: 'Invalid email or password' });
 
-  const isMatch = await bcrypt.compare(password, user.password);
+    user.lastLogin = new Date();
+    await user.save();
 
-  if (!isMatch) return res.status(400).json({ message: "Wrong password" });
+    const token = signToken(user._id);
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    
+    res.json({ token, ...userResponse });
+  } catch (err) {
+    console.error('Login error:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
 
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+// GET /api/auth/me
+router.get('/me', protect, (req, res) => {
+  const userResponse = req.user.toObject ? req.user.toObject() : req.user;
+  delete userResponse.password;
+  res.json(userResponse);
+});
 
-  res.json({ token });
+// PUT /api/auth/profile
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const { name, phone, skinType, skinConcerns } = req.body;
+    const user = await User.findById(req.user._id);
+    if (name) user.name = name;
+    if (phone) user.phone = phone;
+    if (skinType) user.skinType = skinType;
+    if (skinConcerns) user.skinConcerns = skinConcerns;
+    await user.save();
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    res.json(userResponse);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/auth/apply-voucher
+router.post('/apply-voucher', protect, async (req, res) => {
+  try {
+    const { code } = req.body;
+    const user = await User.findById(req.user._id);
+    const voucher = (user.vouchers || []).find(
+      v => v.code === code && !v.isUsed && new Date(v.expiresAt) > new Date()
+    );
+    if (!voucher)
+      return res.status(400).json({ message: 'Invalid or expired voucher code' });
+    res.json({ discount: voucher.discount, message: `${voucher.discount}% discount applied!` });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 module.exports = router;

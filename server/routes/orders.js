@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
 const Product = require('../models/Product');
-const InventoryTransaction = require('../models/InventoryTransaction');
+const User = require('../models/User');
 const { protect, admin } = require('../middleware/auth');
-const { sendOrderConfirmation } = require('../services/emailService'); // ADD THIS LINE
+
+// Import email service
+const { sendOrderConfirmation } = require('../services/emailService');
 
 // Generate invoice number
 function generateInvoiceNumber() {
@@ -17,15 +19,19 @@ router.post('/', protect, async (req, res) => {
     const { items, shippingAddress, paymentMethod, phone, totalAmount, discount, couponCode } = req.body;
     
     console.log('Creating order for user:', req.user._id);
+    console.log('Payment method:', paymentMethod);
     
-    // Calculate totals (FIX: Prices are already in rupees, not paise)
+    // Calculate totals
     let orderTotal = totalAmount || 0;
     const taxAmount = orderTotal * 0.18;
     const shippingAmount = orderTotal > 1000 ? 0 : 50;
     const grandTotal = orderTotal + taxAmount + shippingAmount;
     
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const invoiceNumber = generateInvoiceNumber();
+    
+    // Get user details for email
+    const user = await User.findById(req.user._id);
     
     const order = await Order.create({
       user: req.user._id,
@@ -52,12 +58,17 @@ router.post('/', protect, async (req, res) => {
     
     console.log('Order created:', order._id);
     
-    // SEND EMAIL - Add this block
+    // SEND ORDER CONFIRMATION EMAIL
     try {
-      await sendOrderConfirmation(req.user.email, req.user.name, order);
-      console.log('Order confirmation email sent to:', req.user.email);
+      console.log('Attempting to send email to:', user.email);
+      const emailSent = await sendOrderConfirmation(user.email, user.name, order);
+      if (emailSent) {
+        console.log('✅ Order confirmation email sent to:', user.email);
+      } else {
+        console.log('❌ Failed to send email to:', user.email);
+      }
     } catch (emailError) {
-      console.error('Failed to send email:', emailError);
+      console.error('Email sending error:', emailError);
       // Don't fail the order if email fails
     }
     
@@ -68,11 +79,10 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
-// Rest of your routes remain the same...
+// Get user orders
 router.get('/my-orders', protect, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
-      .populate('items.product')
       .sort('-orderDate');
     res.json(orders);
   } catch (error) {
@@ -80,9 +90,10 @@ router.get('/my-orders', protect, async (req, res) => {
   }
 });
 
+// Get single order
 router.get('/:id', protect, async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate('items.product');
+    const order = await Order.findById(req.params.id);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -97,6 +108,7 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
+// Update order status (admin only)
 router.put('/:id/status', protect, admin, async (req, res) => {
   try {
     const { status, trackingNumber } = req.body;
@@ -120,6 +132,7 @@ router.put('/:id/status', protect, admin, async (req, res) => {
   }
 });
 
+// Get all orders (admin only)
 router.get('/', protect, admin, async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
@@ -128,7 +141,6 @@ router.get('/', protect, admin, async (req, res) => {
     
     const orders = await Order.find(query)
       .populate('user', 'name email')
-      .populate('items.product')
       .sort('-orderDate')
       .limit(limit * 1)
       .skip((page - 1) * limit);

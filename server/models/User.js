@@ -22,12 +22,15 @@ const userSchema = new mongoose.Schema({
     zipCode: String, country: String
   },
   phone:      String,
-  skinType: {
-    type: String,
-    enum: ['oily','dry','combination','normal','sensitive', null],
-    default: null
+  // Add to your User.js schema
+  skinProfile: {
+    skinType: { type: String, enum: ['Oily','Dry','Combination','Normal','Sensitive', null], default: null },
+    concerns: [String],
+    routine: {
+      am: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+      pm: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }]
+    }
   },
-  skinConcerns: [String],
 
   // Glow Points & Loyalty
   glowPoints:  { type: Number, default: 0 },

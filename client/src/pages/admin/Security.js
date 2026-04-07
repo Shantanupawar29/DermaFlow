@@ -71,19 +71,19 @@ export default function Security() {
 
       {/* Implemented measures */}
       <div style={{ marginTop: "2rem", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "1rem", padding: "1.5rem" }}>
-        <h2 style={{ fontWeight: 700, marginBottom: "1rem" }}>✅ Implemented Security Stack</h2>
+        <h2 style={{ fontWeight: 700, marginBottom: "1rem" }}> Implemented Security Stack</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "0.75rem" }}>
           {[
-            "🔐 bcrypt (cost 12) for password hashing",
-            "🪙 JWT tokens with 7-day expiry",
-            "🛡️ Helmet.js — 11 security headers",
-            "🚦 Rate limiting on all API routes",
-            "🔒 CORS whitelist from .env",
-            "🚪 Account lockout after 5 failed logins",
-            "🧹 Input validation with validator.js",
-            "🔑 Admin role-based access control",
-            "🌐 HTTPS enforced in production",
-            "📝 Request logging for audit trail",
+            " bcrypt (cost 12) for password hashing",
+            " JWT tokens with 7-day expiry",
+            " Helmet.js — 11 security headers",
+            " Rate limiting on all API routes",
+            " CORS whitelist from .env",
+            " Account lockout after 5 failed logins",
+            " Input validation with validator.js",
+            " Admin role-based access control",
+            " HTTPS enforced in production",
+            " Request logging for audit trail",
           ].map(m => (
             <div key={m} style={{ background: "#f0fdf4", borderRadius: "0.5rem", padding: "0.75rem", fontSize: "0.8rem", color: "#166534" }}>
               {m}

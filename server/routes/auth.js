@@ -52,7 +52,22 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+router.post('/update-skin-profile', protect, async (req, res) => {
+  const { answers } = req.body;
+  const user = await User.findById(req.user._id);
 
+  // Update basic info
+  user.skinProfile.skinType = answers.skinType;
+  user.skinProfile.concerns = answers.concerns;
+
+  // Call the AI Service to generate the routine based on their answers
+  const { am, pm } = await aiService.generateRoutine(answers.skinType, answers.concerns);
+  
+  user.skinProfile.routine = { am, pm };
+  await user.save();
+
+  res.json({ success: true, user });
+});
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {

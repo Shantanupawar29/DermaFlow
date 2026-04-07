@@ -133,7 +133,22 @@ export default function Dashboard() {
       {/* ── OVERVIEW ── */}
       {tab === 'overview' && (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:'1rem' }}>
-
+          {/* --- AI ROUTINE SECTION --- */}
+{u?.skinProfile?.routine && (
+  <div style={{ marginTop: '2rem', background: '#fff', padding: '1.5rem', borderRadius: '1.25rem', border: `1px solid ${R}20` }}>
+    <h3 style={{ color: R, fontWeight: 800, marginBottom: '1rem' }}>Your AI Routine</h3>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+      <div style={{ background: '#fff9f0', padding: '1rem', borderRadius: '1rem' }}>
+        <p style={{ fontWeight: 700, color: '#b45309' }}>☀️ Morning</p>
+        {u.skinProfile.routine.am.map((p, i) => <p key={i} style={{fontSize: '0.8rem'}}>{p.name}</p>)}
+      </div>
+      <div style={{ background: '#f5f3ff', padding: '1rem', borderRadius: '1rem' }}>
+        <p style={{ fontWeight: 700, color: '#7c3aed' }}>🌙 Evening</p>
+        {u.skinProfile.routine.pm.map((p, i) => <p key={i} style={{fontSize: '0.8rem'}}>{p.name}</p>)}
+      </div>
+    </div>
+  </div>
+)}
           {/* Loyalty card */}
           <div style={{ background:`linear-gradient(135deg,${tier.bg},#fff)`, border:`1.5px solid ${tier.color}30`, borderRadius:'1.25rem', padding:'1.5rem' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'1rem' }}>

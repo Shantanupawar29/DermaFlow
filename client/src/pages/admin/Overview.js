@@ -36,10 +36,10 @@ export default function Overview() {
 
       {/* Stats row */}
       <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "2rem" }}>
-        <StatCard emoji="💰" label="Total Revenue" value={fmt(data.totalRevenue)} color="#7B2D3C" />
-        <StatCard emoji="📦" label="Total Orders"  value={data.totalOrders}  color="#1d4ed8" />
-        <StatCard emoji="👥" label="Customers"     value={data.totalUsers}   color="#047857" />
-        <StatCard emoji="🧴" label="Products"      value={data.totalProducts} color="#b45309" />
+        <StatCard emoji="" label="Total Revenue" value={fmt(data.totalRevenue)} color="#7B2D3C" />
+        <StatCard emoji="" label="Total Orders"  value={data.totalOrders}  color="#1d4ed8" />
+        <StatCard emoji="" label="Customers"     value={data.totalUsers}   color="#047857" />
+        <StatCard emoji="" label="Products"      value={data.totalProducts} color="#b45309" />
       </div>
 
       {/* Low stock alerts */}

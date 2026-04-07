@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom'; // Added useLocation
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
@@ -13,17 +13,17 @@ const Icon = ({ d, size = 18, color = 'currentColor', stroke = 2 }) => (
     <path d={d} />
   </svg>
 );
-const StarIcon    = (p) => <Icon {...p} d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />;
-const BoxIcon     = (p) => <Icon {...p} d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />;
-const WalletIcon  = (p) => <Icon {...p} d="M21 12V7H5a2 2 0 010-4h14v4M21 12a2 2 0 010 4H5a2 2 0 010 4h16v-4" />;
-const TierIcon    = (p) => <Icon {...p} d="M12 15l-3-3 3-3 3 3-3 3zM2 12l5 5 5-5-5-5-5 5zM17 7l5 5-5 5-5-5 5-5z" />;
-const ShopIcon    = (p) => <Icon {...p} d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" />;
-const SkinIcon    = (p) => <Icon {...p} d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />;
-const CartIcon    = (p) => <Icon {...p} d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z M9 22V12h6v10" />;
-const GiftIcon    = (p) => <Icon {...p} d="M20 12v10H4V12M22 7H2v5h20V7zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z" />;
-const TicketIcon  = (p) => <Icon {...p} d="M2 9a3 3 0 010-6h20a3 3 0 010 6H2M2 15a3 3 0 010 6h20a3 3 0 010-6H2" />;
-const LogoutIcon  = (p) => <Icon {...p} d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />;
-const CheckIcon   = (p) => <Icon {...p} d="M20 6L9 17l-5-5" />;
+const StarIcon     = (p) => <Icon {...p} d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />;
+const BoxIcon      = (p) => <Icon {...p} d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />;
+const WalletIcon   = (p) => <Icon {...p} d="M21 12V7H5a2 2 0 010-4h14v4M21 12a2 2 0 010 4H5a2 2 0 010 4h16v-4" />;
+const TierIcon     = (p) => <Icon {...p} d="M12 15l-3-3 3-3 3 3-3 3zM2 12l5 5 5-5-5-5-5 5zM17 7l5 5-5 5-5-5 5-5z" />;
+const ShopIcon     = (p) => <Icon {...p} d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" />;
+const SkinIcon     = (p) => <Icon {...p} d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />;
+const CartIcon     = (p) => <Icon {...p} d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z M9 22V12h6v10" />;
+const GiftIcon     = (p) => <Icon {...p} d="M20 12v10H4V12M22 7H2v5h20V7zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z" />;
+const TicketIcon   = (p) => <Icon {...p} d="M2 9a3 3 0 010-6h20a3 3 0 010 6H2M2 15a3 3 0 010 6h20a3 3 0 010-6H2" />;
+const LogoutIcon   = (p) => <Icon {...p} d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />;
+const CheckIcon    = (p) => <Icon {...p} d="M20 6L9 17l-5-5" />;
 
 const TIER_STYLE = {
   bronze:   { color:'#d97706', bg:'#fef3c7', bar:'#f59e0b', label:'Bronze',   next:'Spend ₹5,000 for Silver' },
@@ -62,21 +62,26 @@ function StatCard({ icon, label, value, color }) {
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation(); // Used to detect if we just came from the Quiz
   const [u,       setU]       = useState(null);
   const [orders,  setOrders]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab,     setTab]     = useState('overview');
 
-  useEffect(() => {
-    if (!user) { navigate('/login'); return; }
+  const fetchDashboardData = () => {
     Promise.all([
-      axios.get(`${API}/auth/me`,          { headers:{ Authorization:`Bearer ${tok()}` } }),
+      axios.get(`${API}/auth/me`,           { headers:{ Authorization:`Bearer ${tok()}` } }),
       axios.get(`${API}/orders/my-orders`, { headers:{ Authorization:`Bearer ${tok()}` } }),
     ])
       .then(([ur, or]) => { setU(ur.data.user); setOrders(or.data); })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [user, navigate]);
+  };
+
+  useEffect(() => {
+    if (!user) { navigate('/login'); return; }
+    fetchDashboardData();
+  }, [user, navigate, location.state]); // location.state ensures it refreshes after the Quiz redirect
 
   if (!user || loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh', color:'#6b7280' }}>
@@ -117,10 +122,10 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:'0.875rem', marginBottom:'1.5rem' }}>
-        <StatCard icon={<StarIcon size={20} color={R} />}          label="Glow Points"  value={cu.glowPoints||0}                                                    color={R} />
-        <StatCard icon={<BoxIcon size={20} color="#1d4ed8" />}     label="Orders"       value={orders.length}                                                       color="#1d4ed8" />
-        <StatCard icon={<WalletIcon size={20} color="#047857" />}  label="Total Spent"  value={`₹${((totalSpent)/100).toFixed(0)}`}                                color="#047857" />
-        <StatCard icon={<TierIcon size={20} color={tier.color} />} label="Loyalty Tier" value={tier.label}                                                          color={tier.color} />
+        <StatCard icon={<StarIcon size={20} color={R} />}           label="Glow Points"  value={cu.glowPoints||0}                                                                   color={R} />
+        <StatCard icon={<BoxIcon size={20} color="#1d4ed8" />}     label="Orders"       value={orders.length}                                                                      color="#1d4ed8" />
+        <StatCard icon={<WalletIcon size={20} color="#047857" />}  label="Total Spent"  value={`₹${((totalSpent)/100).toFixed(0)}`}                               color="#047857" />
+        <StatCard icon={<TierIcon size={20} color={tier.color} />} label="Loyalty Tier" value={tier.label}                                                                        color={tier.color} />
       </div>
 
       {/* Tabs */}
@@ -132,80 +137,95 @@ export default function Dashboard() {
 
       {/* ── OVERVIEW ── */}
       {tab === 'overview' && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:'1rem' }}>
-          {/* --- AI ROUTINE SECTION --- */}
-{u?.skinProfile?.routine && (
-  <div style={{ marginTop: '2rem', background: '#fff', padding: '1.5rem', borderRadius: '1.25rem', border: `1px solid ${R}20` }}>
-    <h3 style={{ color: R, fontWeight: 800, marginBottom: '1rem' }}>Your AI Routine</h3>
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-      <div style={{ background: '#fff9f0', padding: '1rem', borderRadius: '1rem' }}>
-        <p style={{ fontWeight: 700, color: '#b45309' }}>☀️ Morning</p>
-        {u.skinProfile.routine.am.map((p, i) => <p key={i} style={{fontSize: '0.8rem'}}>{p.name}</p>)}
-      </div>
-      <div style={{ background: '#f5f3ff', padding: '1rem', borderRadius: '1rem' }}>
-        <p style={{ fontWeight: 700, color: '#7c3aed' }}>🌙 Evening</p>
-        {u.skinProfile.routine.pm.map((p, i) => <p key={i} style={{fontSize: '0.8rem'}}>{p.name}</p>)}
-      </div>
-    </div>
-  </div>
-)}
-          {/* Loyalty card */}
-          <div style={{ background:`linear-gradient(135deg,${tier.bg},#fff)`, border:`1.5px solid ${tier.color}30`, borderRadius:'1.25rem', padding:'1.5rem' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'1rem' }}>
-              <div>
-                <div style={{ display:'flex', alignItems:'center', gap:'0.4rem', fontWeight:800, color:tier.color, fontSize:'0.9rem' }}>
-                  <TierIcon size={16} color={tier.color} /> {tier.label.toUpperCase()}
+        <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+          
+          {/* --- AI ROUTINE SECTION (Injected into Overview) --- */}
+          {cu.skinProfile?.routine && (
+            <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '1.25rem', border: `1px solid ${R}20`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'1rem' }}>
+                <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" size={20} color={R} />
+                <h3 style={{ color: R, fontWeight: 800, fontSize:'1rem', margin:0 }}>Your AI Personalized Routine</h3>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div style={{ background: '#fff9f0', padding: '1rem', borderRadius: '1rem', border:'1px solid #fef3c7' }}>
+                  <p style={{ fontWeight: 800, color: '#b45309', fontSize:'0.75rem', marginBottom:'0.5rem', letterSpacing:'0.05em' }}>☀️ MORNING RITUAL</p>
+                  {cu.skinProfile.routine.am.map((p, i) => (
+                    <div key={i} style={{fontSize: '0.82rem', padding:'0.3rem 0', color:'#4b5563', borderBottom: i !== cu.skinProfile.routine.am.length -1 ? '1px solid #fef3c7' : 'none' }}>
+                      {i+1}. {p.name}
+                    </div>
+                  ))}
                 </div>
-                <div style={{ fontSize:'0.75rem', color:'#6b7280', marginTop:'0.2rem' }}>{tier.next}</div>
-              </div>
-              <div style={{ textAlign:'right' }}>
-                <div style={{ fontSize:'1.75rem', fontWeight:800, color:tier.color, lineHeight:1 }}>{cu.glowPoints||0}</div>
-                <div style={{ fontSize:'0.7rem', color:'#9ca3af' }}>Glow Points</div>
-              </div>
-            </div>
-            <div style={{ background:'#e5e7eb', borderRadius:'999px', height:7, overflow:'hidden' }}>
-              <div style={{ height:7, background:tier.bar, width:`${pct}%`, borderRadius:'999px', transition:'width 0.8s ease' }} />
-            </div>
-            <div style={{ display:'flex', justifyContent:'space-between', marginTop:'0.4rem', fontSize:'0.72rem', color:'#9ca3af' }}>
-              <span>₹{(totalSpent/100).toFixed(0)} spent</span>
-              <span>500 pts = ₹50 off</span>
-            </div>
-          </div>
-
-          {/* Quick actions */}
-          <div style={{ background:'#fff', border:'1px solid #f3f4f6', borderRadius:'1.25rem', padding:'1.5rem', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ fontWeight:700, color:'#1f2937', marginBottom:'0.875rem', fontSize:'0.95rem' }}>Quick Actions</h3>
-            {[
-              { to:'/products', Icon:ShopIcon,  label:'Browse All Products' },
-              { to:'/cart',     Icon:CartIcon,  label:'View Cart' },
-            ].map(a => (
-              <Link key={a.to} to={a.to} style={{ display:'flex', alignItems:'center', gap:'0.65rem', background:'#f9fafb', borderRadius:'0.6rem', padding:'0.65rem 0.875rem', textDecoration:'none', color:'#374151', fontSize:'0.875rem', fontWeight:500, marginBottom:'0.5rem', border:'1px solid #f3f4f6' }}>
-                <a.Icon size={16} color={R} /> {a.label}
-              </Link>
-            ))}
-          </div>
-
-          {/* Latest order */}
-          {orders.length > 0 && (() => {
-            const o = orders[0];
-            const sc = STATUS_STYLE[o.status] || STATUS_STYLE.pending;
-            return (
-              <div style={{ background:'#fff', border:'1px solid #f3f4f6', borderRadius:'1.25rem', padding:'1.5rem', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
-                <h3 style={{ fontWeight:700, color:'#1f2937', marginBottom:'0.875rem', fontSize:'0.95rem', display:'flex', alignItems:'center', gap:'0.4rem' }}>
-                  <BoxIcon size={16} color={R} /> Latest Order
-                </h3>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.4rem' }}>
-                  <span style={{ fontWeight:700, fontSize:'0.875rem' }}>#{o._id.slice(-8).toUpperCase()}</span>
-                  <span style={{ background:sc.bg, color:sc.color, fontSize:'0.7rem', fontWeight:700, padding:'0.2rem 0.6rem', borderRadius:999 }}>{o.status?.toUpperCase()}</span>
+                <div style={{ background: '#f5f3ff', padding: '1rem', borderRadius: '1rem', border:'1px solid #ede9fe' }}>
+                  <p style={{ fontWeight: 800, color: '#7c3aed', fontSize:'0.75rem', marginBottom:'0.5rem', letterSpacing:'0.05em' }}>🌙 EVENING RITUAL</p>
+                  {cu.skinProfile.routine.pm.map((p, i) => (
+                    <div key={i} style={{fontSize: '0.82rem', padding:'0.3rem 0', color:'#4b5563', borderBottom: i !== cu.skinProfile.routine.pm.length -1 ? '1px solid #ede9fe' : 'none' }}>
+                      {i+1}. {p.name}
+                    </div>
+                  ))}
                 </div>
-                <div style={{ fontSize:'0.8rem', color:'#6b7280', marginBottom:'0.5rem' }}>{(o.items||[]).map(i=>i.name).join(', ')}</div>
-                <div style={{ fontWeight:800, color:R }}>₹{((o.totalAmount||0)/100).toFixed(2)}</div>
-                <button onClick={() => setTab('orders')} style={{ marginTop:'0.75rem', fontSize:'0.8rem', color:R, background:'none', border:'none', cursor:'pointer', fontWeight:600, padding:0 }}>
-                  View all orders →
-                </button>
               </div>
-            );
-          })()}
+            </div>
+          )}
+
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:'1rem' }}>
+            {/* Loyalty card */}
+            <div style={{ background:`linear-gradient(135deg,${tier.bg},#fff)`, border:`1.5px solid ${tier.color}30`, borderRadius:'1.25rem', padding:'1.5rem' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'1rem' }}>
+                <div>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.4rem', fontWeight:800, color:tier.color, fontSize:'0.9rem' }}>
+                    <TierIcon size={16} color={tier.color} /> {tier.label.toUpperCase()}
+                  </div>
+                  <div style={{ fontSize:'0.75rem', color:'#6b7280', marginTop:'0.2rem' }}>{tier.next}</div>
+                </div>
+                <div style={{ textAlign:'right' }}>
+                  <div style={{ fontSize:'1.75rem', fontWeight:800, color:tier.color, lineHeight:1 }}>{cu.glowPoints||0}</div>
+                  <div style={{ fontSize:'0.7rem', color:'#9ca3af' }}>Glow Points</div>
+                </div>
+              </div>
+              <div style={{ background:'#e5e7eb', borderRadius:'999px', height:7, overflow:'hidden' }}>
+                <div style={{ height:7, background:tier.bar, width:`${pct}%`, borderRadius:'999px', transition:'width 0.8s ease' }} />
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', marginTop:'0.4rem', fontSize:'0.72rem', color:'#9ca3af' }}>
+                <span>₹{(totalSpent/100).toFixed(0)} spent</span>
+                <span>500 pts = ₹50 off</span>
+              </div>
+            </div>
+
+            {/* Quick actions */}
+            <div style={{ background:'#fff', border:'1px solid #f3f4f6', borderRadius:'1.25rem', padding:'1.5rem', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
+              <h3 style={{ fontWeight:700, color:'#1f2937', marginBottom:'0.875rem', fontSize:'0.95rem' }}>Quick Actions</h3>
+              {[
+                { to:'/products', Icon:ShopIcon,  label:'Browse All Products' },
+                { to:'/cart',     Icon:CartIcon,  label:'View Cart' },
+              ].map(a => (
+                <Link key={a.to} to={a.to} style={{ display:'flex', alignItems:'center', gap:'0.65rem', background:'#f9fafb', borderRadius:'0.6rem', padding:'0.65rem 0.875rem', textDecoration:'none', color:'#374151', fontSize:'0.875rem', fontWeight:500, marginBottom:'0.5rem', border:'1px solid #f3f4f6' }}>
+                  <a.Icon size={16} color={R} /> {a.label}
+                </Link>
+              ))}
+            </div>
+
+            {/* Latest order */}
+            {orders.length > 0 && (() => {
+              const o = orders[0];
+              const sc = STATUS_STYLE[o.status] || STATUS_STYLE.pending;
+              return (
+                <div style={{ background:'#fff', border:'1px solid #f3f4f6', borderRadius:'1.25rem', padding:'1.5rem', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <h3 style={{ fontWeight:700, color:'#1f2937', marginBottom:'0.875rem', fontSize:'0.95rem', display:'flex', alignItems:'center', gap:'0.4rem' }}>
+                    <BoxIcon size={16} color={R} /> Latest Order
+                  </h3>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.4rem' }}>
+                    <span style={{ fontWeight:700, fontSize:'0.875rem' }}>#{o._id.slice(-8).toUpperCase()}</span>
+                    <span style={{ background:sc.bg, color:sc.color, fontSize:'0.7rem', fontWeight:700, padding:'0.2rem 0.6rem', borderRadius:999 }}>{o.status?.toUpperCase()}</span>
+                  </div>
+                  <div style={{ fontSize:'0.8rem', color:'#6b7280', marginBottom:'0.5rem' }}>{(o.items||[]).map(i=>i.name).join(', ')}</div>
+                  <div style={{ fontWeight:800, color:R }}>₹{((o.totalAmount||0)/100).toFixed(2)}</div>
+                  <button onClick={() => setTab('orders')} style={{ marginTop:'0.75rem', fontSize:'0.8rem', color:R, background:'none', border:'none', cursor:'pointer', fontWeight:600, padding:0 }}>
+                    View all orders →
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 

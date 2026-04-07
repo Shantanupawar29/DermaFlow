@@ -94,16 +94,16 @@ export default function Home() {
             <p className="mt-2 text-muted-foreground">Our most loved formulas, backed by science</p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {featuredProducts.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <ProductCard product={product} />
-              </motion.div>
-            ))}
+           {featuredProducts.map((product, index) => (
+  <motion.div
+    key={product._id || product.id || index}  // Add this line
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay: index * 0.1 }}
+  >
+    <ProductCard product={product} />
+  </motion.div>
+))}
           </div>
           <div className="mt-10 text-center">
             <Link to="/products" className="border-2 border-maroon text-maroon px-8 py-3 rounded-lg hover:bg-maroon hover:text-white transition duration-200 inline-flex items-center">

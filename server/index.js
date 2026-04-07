@@ -19,7 +19,13 @@ const inventoryRoutes = require('./routes/inventory');
 const customerRoutes  = require('./routes/customers');
 const analyticsRoutes = require('./routes/analytics');
 const paymentRoutes   = require('./routes/payment');
+const scmRoutes = require('./routes/scm');
 
+const sellerAuthRoutes = require('./routes/sellerAuth');
+
+// Add these BEFORE your routes
+app.use('/api/scm', scmRoutes);
+app.use('/api/seller/auth', sellerAuthRoutes);
 app.use('/api/products',  productRoutes);
 app.use('/api/auth',      authRoutes);
 app.use('/api/orders',    orderRoutes);

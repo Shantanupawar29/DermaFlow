@@ -20,6 +20,53 @@ const createTransporter = () => {
     socketTimeout: 10000
   });
 };
+// Add this function to existing emailService.js
+const sendStockAlert = async (supplierEmail, supplierName, product, alert) => {
+  const transporter = createTransporter();
+  if (!transporter) return false;
+  
+  const mailOptions = {
+    from: `"DermaFlow SCM" <${process.env.EMAIL_USER}>`,
+    to: supplierEmail,
+    subject: `⚠️ URGENT: Stock Alert for ${product.name}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #dc2626; padding: 20px; text-align: center; color: white;">
+          <h2>⚠️ Critical Stock Alert</h2>
+        </div>
+        <div style="padding: 20px;">
+          <h3>Dear ${supplierName},</h3>
+          <p>The following product has reached critical stock level:</p>
+          
+          <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <p><strong>Product:</strong> ${product.name}</p>
+            <p><strong>Current Stock:</strong> ${alert.currentStock} units</p>
+            <p><strong>Critical Threshold:</strong> ${alert.criticalThreshold} units</p>
+            <p><strong>Recommended Reorder:</strong> ${alert.reorderQuantity} units</p>
+            <p><strong>Sales Velocity:</strong> ${product.salesVelocity?.toFixed(1) || 'N/A'} units/day</p>
+          </div>
+          
+          <p>Please restock this product at your earliest convenience.</p>
+          
+          <div style="text-align: center; margin-top: 20px;">
+            <a href="${process.env.FRONTEND_URL}/admin/scm" style="background: #4A0E2E; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+              View Dashboard →
+            </a>
+          </div>
+        </div>
+      </div>
+    `
+  };
+  
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Stock alert sent to ${supplierEmail}`);
+    return true;
+  } catch (error) {
+    console.error('Stock alert email failed:', error);
+    return false;
+  }
+};
 
 // Send order confirmation email
 const sendOrderConfirmation = async (email, name, order) => {
@@ -174,4 +221,5 @@ const sendWelcomeEmail = async (email, name) => {
   }
 };
 
-module.exports = { sendOrderConfirmation, sendWelcomeEmail };
+
+module.exports = { sendOrderConfirmation, sendWelcomeEmail, sendStockAlert };

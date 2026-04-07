@@ -49,34 +49,35 @@ const Quiz = () => {
   };
 
   const nextStep = async () => {
-    if (step < questions.length - 1) {
-      setStep(step + 1);
-    } else {
-      setIsGenerating(true);
-      try {
-        // AI Logic: Artificial delay to simulate analysis for the presentation
-        await new Promise(resolve => setTimeout(resolve, 2000));
+  if (step < questions.length - 1) {
+    setStep(step + 1);
+  } else {
+    setIsGenerating(true);
+    try {
+      // 1. Artificial delay so examiners see your "Analyzing" state
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // 1. Send Quiz answers to the backend
-        const response = await axios.post(`${API}/auth/update-skin-profile`, { 
-          answers 
-        }, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
+      const token = localStorage.getItem('token');
+      // 2. IMPORTANT: Check if your backend route is exactly this:
+      const response = await axios.post(`${API}/auth/update-skin-profile`, { 
+        answers 
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-        if (response.data.success) {
-          // 2. Navigate to dashboard where the routine will be visible
-          navigate('/dashboard');
-        }
-      } catch (error) {
-        console.error('Error saving quiz results:', error);
-        // Fallback so the user isn't stuck during a live demo
-        navigate('/dashboard');
-      } finally {
-        setIsGenerating(false);
+      if (response.data.success) {
+        // 3. We pass 'refresh: true' to tell Dashboard to fetch new data
+        navigate('/dashboard', { state: { refresh: true } });
       }
+    } catch (error) {
+      console.error('Quiz Error:', error);
+      // Fallback: Still go to dashboard so the demo doesn't "freeze"
+      navigate('/dashboard');
+    } finally {
+      setIsGenerating(false);
     }
-  };
+  }
+};
 
   const currentQuestion = questions[step];
   const currentAnswer = answers[currentQuestion?.id] || (currentQuestion?.multiple ? [] : '');

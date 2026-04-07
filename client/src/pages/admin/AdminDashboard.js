@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { LayoutDashboard, Package, ShoppingBag, Users, BarChart3, Shield, Cloud, Database, FileText, TrendingUp, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Users, BarChart3, Shield, Cloud, Database, FileText, TrendingUp, Megaphone, Truck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Overview from './Overview';
 import Orders from './Orders';
@@ -14,6 +14,8 @@ import ERPIntegration from './ERPIntegration';
 import LegalDashboard from './Legaldashboard'; // Fixed: Capital L
 import RevenueDashboard from './RevenueDashboard';
 import MarketingDashboard from './MarketingDashboard';
+import SCMDashboard from './SCMDashboard';
+import SellerManagement from './SellerManagement';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -68,6 +70,8 @@ const AdminDashboard = () => {
     { path: 'erp', label: 'ERP Integration', icon: Database },
     { path: 'security', label: 'Security', icon: Shield },
     { path: 'deployment', label: 'Deployment', icon: Cloud },
+    { path: 'scm', label: 'Supply Chain', icon: Truck },
+    { path: 'sellers', label: 'Sellers', icon: Users },
   ];
 
   if (loading) {
@@ -113,6 +117,8 @@ const AdminDashboard = () => {
               <Route path="erp" element={<ERPIntegration />} />
               <Route path="security" element={<Security />} />
               <Route path="deployment" element={<Deployment />} />
+              <Route path="scm" element={<SCMDashboard />} />
+              <Route path="sellers" element={<SellerManagement />} />
             </Routes>
           </div>
         </div>

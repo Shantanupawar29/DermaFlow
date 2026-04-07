@@ -17,7 +17,7 @@ export default function Security() {
 
   return (
     <div>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.5rem" }}>Risk Assessment & Security (Exp 7)</h1>
+      <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.5rem" }}>Risk Assessment & Security</h1>
       <p style={{ color: "#6b7280", fontSize: "0.875rem", marginBottom: "2rem" }}>
         Threat matrix showing identified risks and implemented countermeasures for the DermaFlow e-commerce platform.
       </p>

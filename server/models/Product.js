@@ -52,10 +52,19 @@ const productSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  
   safetyThreshold: {
   type: Number,
   default: 10
-}
+},
+// Add these fields to existing product schema:
+supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
+criticalThreshold: { type: Number, default: 10 }, // Alert when stock reaches this
+reorderQuantity: { type: Number, default: 50 }, // Quantity to reorder
+leadTimeDays: { type: Number, default: 7 }, // Days from order to delivery
+autoReorder: { type: Boolean, default: false },
+lastReplenished: Date,
+salesVelocity: { type: Number, default: 0 } // Units sold per day
 });
 
 module.exports = mongoose.model('Product', productSchema);

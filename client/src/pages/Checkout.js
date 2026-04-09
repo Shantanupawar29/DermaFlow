@@ -115,7 +115,9 @@ const Checkout = () => {
         setLoading(false);
         return;
       }
-
+const amountInPaise = Math.round(grandTotal * 100);
+    console.log('💰 Sending amount to backend (paise):', amountInPaise);
+    console.log('💰 Original amount (rupees):', grandTotal);
       const { data: razorpayOrder } = await axios.post(
         'http://localhost:5000/api/payment/create-order',
         { amount: grandTotal },

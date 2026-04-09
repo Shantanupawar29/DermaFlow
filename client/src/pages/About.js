@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Leaf, Shield, Heart, Users, Award, Globe, Sparkles } from 'lucide-react';
 import shantanuImg from '../assets/shantanu.jpeg';
 import anushkaImg from '../assets/Anushka.jpeg';
+import aboutimg from '../assets/about.jpg';
 const About = () => {
   const values = [
     {
@@ -59,9 +60,25 @@ const About = () => {
             <div>
               <h2 className="text-3xl font-display font-bold text-foreground mb-4">Our Mission</h2>
               <p className="text-lg text-muted-foreground mb-6">
-                At DermaFlow, we believe that healthy skin is not a luxury—it's a necessity. 
-                We're on a mission to democratize dermatologist-approved skincare by combining 
-                cutting-edge science with clean, sustainable ingredients.
+                "We didn't just build DermaFlow. We built the solution we desperately needed."
+
+Like millions of you, our founders spent years staring at bathroom mirrors, frustrated by expensive skincare routines that promised everything but delivered nothing.
+
+Late nights researching ingredients. Wasted money on products that caused breakouts instead of healing them. Conflicting advice from every direction.
+
+Sound familiar?
+
+After countless allergic reactions, wasted thousands of dollars, and enough frustration to give up entirely, we realized something was broken. The skincare industry wasn't designed for real people with real skin problems. It was designed for profit.
+
+So we decided to fix it.
+
+Our mission became simple: Create dermatologist-approved skincare that actually works, using clean ingredients you can pronounce, at prices that don't require a second mortgage.
+
+Today, DermaFlow is that solution—born from frustration, built with science, and fueled by the belief that everyone deserves healthy skin, regardless of their budget or skin type.
+
+We're not just selling products. We're giving people back their confidence, one clear skin day at a time.
+
+— The Founders, DermaFlow
               </p>
               <p className="text-lg text-muted-foreground">
                 Every product we create is rigorously tested, clinically proven, and formulated 
@@ -79,7 +96,7 @@ const About = () => {
             </div>
             <div className="relative">
               <img 
-                src="https://images.pexels.com/photos/3755706/pexels-photo-3755706.jpeg?auto=compress&cs=tinysrgb&w=600"
+                src={aboutimg}
                 alt="Our lab"
                 className="rounded-lg shadow-xl w-full"
               />

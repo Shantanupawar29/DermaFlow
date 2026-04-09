@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { getProductById } from "../services/api";
+import axios from "axios";
 import { useCart } from "../context/CartContext";
+import { formatPrice, getRupees, toPaise } from "../utils/price";
+
+const API_URL = 'http://localhost:5000/api';
 
 const badge = (text, color) => (
   <span style={{ display: "inline-block", background: color, color: "#fff", fontSize: "0.7rem", fontWeight: "600", padding: "0.2rem 0.6rem", borderRadius: "999px", marginRight: "0.4rem", marginBottom: "0.4rem" }}>
@@ -19,11 +22,17 @@ export default function ProductDetail() {
   const { addToCart } = useCart();
 
   useEffect(() => {
-    setLoading(true);
-    getProductById(id)
-      .then((res) => setProduct(res.data))
-      .catch(() => setError("Product not found."))
-      .finally(() => setLoading(false));
+    const fetchProduct = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/products/${id}`);
+        setProduct(response.data);
+      } catch (err) {
+        setError("Product not found.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
   }, [id]);
 
   const handleAddToCart = () => {
@@ -40,8 +49,10 @@ export default function ProductDetail() {
     </div>
   );
 
-  const displayPrice = (product.price / 100).toFixed(2);
-  const subPrice = (product.price * 0.9 / 100).toFixed(2);
+  // Price is in paise from backend
+  const originalPrice = product.price;
+  const subscriptionPrice = originalPrice * 0.9;
+  const displayPrice = isSubscription ? subscriptionPrice : originalPrice;
   const inStock = product.stockQuantity > 0;
 
   return (
@@ -53,8 +64,8 @@ export default function ProductDetail() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3rem", alignItems: "start" }}>
         {/* Image */}
         <div>
-          {product.image ? (
-            <img src={product.image} alt={product.name} style={{ width: "100%", borderRadius: "1rem", objectFit: "cover", aspectRatio: "1/1" }} />
+          {product.images?.[0] ? (
+            <img src={product.images[0]} alt={product.name} style={{ width: "100%", borderRadius: "1rem", objectFit: "cover", aspectRatio: "1/1" }} />
           ) : (
             <div style={{ background: "#F5E8EA", borderRadius: "1rem", aspectRatio: "1/1", display: "flex", alignItems: "center", justifyContent: "center", color: "#7B2D3C", fontWeight: "600", fontSize: "1.25rem", textAlign: "center", padding: "2rem" }}>
               {product.name}
@@ -77,13 +88,15 @@ export default function ProductDetail() {
             {product.description}
           </p>
 
-          {/* Price */}
+          {/* Price - Now using formatPrice */}
           <div style={{ marginBottom: "1.25rem" }}>
             <div style={{ fontSize: "1.75rem", fontWeight: "700", color: "#7B2D3C" }}>
-              ₹{isSubscription ? subPrice : displayPrice}
+              {formatPrice(displayPrice)}
             </div>
             {isSubscription && (
-              <span style={{ textDecoration: "line-through", color: "#9ca3af", fontSize: "0.875rem" }}>₹{displayPrice}</span>
+              <span style={{ textDecoration: "line-through", color: "#9ca3af", fontSize: "0.875rem" }}>
+                {formatPrice(originalPrice)}
+              </span>
             )}
           </div>
 

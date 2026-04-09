@@ -53,18 +53,32 @@ const productSchema = new mongoose.Schema({
     default: Date.now
   },
   
+  // Quiz/Recommendation Fields
+  skinType: { 
+    type: String, 
+    enum: ['oily', 'dry', 'combination', 'normal', 'sensitive'], 
+    default: null 
+  },
+  concerns: [String],
+  routineTime: { 
+    type: String, 
+    enum: ['AM', 'PM', 'both'], 
+    default: 'both' 
+  },
+  ingredients: [String],
+  
+  // SCM Fields
   safetyThreshold: {
-  type: Number,
-  default: 10
-},
-// Add these fields to existing product schema:
-supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
-criticalThreshold: { type: Number, default: 10 }, // Alert when stock reaches this
-reorderQuantity: { type: Number, default: 50 }, // Quantity to reorder
-leadTimeDays: { type: Number, default: 7 }, // Days from order to delivery
-autoReorder: { type: Boolean, default: false },
-lastReplenished: Date,
-salesVelocity: { type: Number, default: 0 } // Units sold per day
+    type: Number,
+    default: 10
+  },
+  supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
+  criticalThreshold: { type: Number, default: 10 },
+  reorderQuantity: { type: Number, default: 50 },
+  leadTimeDays: { type: Number, default: 7 },
+  autoReorder: { type: Boolean, default: false },
+  lastReplenished: Date,
+  salesVelocity: { type: Number, default: 0 }
 });
 
-module.exports = mongoose.model('Product', productSchema);
+module.exports = mongoose.models.Product || mongoose.model('Product', productSchema);

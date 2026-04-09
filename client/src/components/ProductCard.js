@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Star } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { formatPrice } from '../utils/price';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
@@ -46,9 +47,9 @@ const ProductCard = ({ product }) => {
 
         <div className="flex justify-between items-center mt-3">
           <div>
-            <span className="text-2xl font-bold text-maroon">₹{product.price}</span>
+            <span className="text-2xl font-bold text-maroon">{formatPrice(product.price)}</span>
             {product.oldPrice && (
-              <span className="text-sm text-gray-400 line-through ml-2">₹{product.oldPrice}</span>
+              <span className="text-sm text-gray-400 line-through ml-2">{formatPrice(product.oldPrice)}</span>
             )}
           </div>
           <button

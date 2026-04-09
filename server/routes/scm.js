@@ -259,6 +259,31 @@ router.put('/products/:productId/assign-supplier', protect, admin, async (req, r
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+});router.post('/confirm-recycle/:userId', protect, admin, async (req, res) => {
+    const user = await User.findById(req.params.userId);
+    
+    // 1. Update SCM Inventory (ERP Pillar)
+    // logic to add 'empty_bottle' to warehouse inventory...
+
+    // 2. Update CRM Points (CRM Pillar)
+    user.glowPoints += 200; // 200 points for recycling
+    user.recycledBottles = (user.recycledBottles || 0) + 1;
+    
+    // 3. Trigger Tier Logic
+    if(user.recycledBottles >= 10) user.tier = 'Emerald';
+    
+    await user.save();
+
+    // 4. Log for Security
+    await AuditLog.create({
+        adminName: req.user.name,
+        action: 'UPDATE_USER_DATA',
+        description: `Confirmed bottle recycle for ${user.name}. Tier updated to ${user.tier}.`,
+        riskLevel: 'low',
+        dataCategory: 'operational'
+    });
+
+    res.json({ success: true, newPoints: user.glowPoints, newTier: user.tier });
 });
 
 module.exports = router;

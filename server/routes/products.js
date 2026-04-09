@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('../models/Product');
-const InventoryTransaction = require('../models/InventoryTransaction');
+const Product = require('../models/Product'); // Import the model, not define it
 const { protect, admin } = require('../middleware/auth');
 
 // Get all products with filters
@@ -89,30 +88,14 @@ router.put('/:id', protect, admin, async (req, res) => {
   }
 });
 
-// Update stock (admin only)
-router.put('/:id/stock', protect, admin, async (req, res) => {
+// Delete product (admin only)
+router.delete('/:id', protect, admin, async (req, res) => {
   try {
-    const { quantity, reason } = req.body;
-    const product = await Product.findById(req.params.id);
-    
+    const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
-    
-    const previousStock = product.stockQuantity;
-    product.stockQuantity = quantity;
-    await product.save();
-    
-    await InventoryTransaction.create({
-      product: product._id,
-      type: 'adjustment',
-      quantity: quantity - previousStock,
-      previousStock,
-      newStock: quantity,
-      reason
-    });
-    
-    res.json(product);
+    res.json({ message: 'Product deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

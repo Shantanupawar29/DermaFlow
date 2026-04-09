@@ -96,14 +96,63 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+// 1. Update User Address (SCM/CRM Pillar)
+router.put('/address', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        user.addresses.push(req.body.address); // Make sure your User model has an 'addresses' array
+        await user.save();
+        res.json({ success: true, user });
+    } catch (error) { res.status(500).json({ message: error.message }); }
+});
 
+// 2. Recycle Plastic Trigger (CRM/Sustainability Pillar)
+router.post('/recycle', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        const pointsToAdd = 20; // Example: 20 points per bottle
+        
+        user.glowPoints += pointsToAdd;
+        user.recycledBottles = (user.recycledBottles || 0) + 1;
+        
+        await user.save();
+
+        // SECURITY: Log this point change
+        await AuditLog.create({
+            action: 'UPDATE_USER_DATA',
+            targetName: user.name,
+            description: `User recycled a bottle. Earned ${pointsToAdd} points.`,
+            riskLevel: 'low',
+            dataCategory: 'personal_data'
+        });
+
+        res.json({ success: true, glowPoints: user.glowPoints });
+    } catch (error) { res.status(500).json({ message: error.message }); }
+});
 // GET /api/auth/me
 router.get('/me', protect, (req, res) => {
   const userResponse = req.user.toObject ? req.user.toObject() : req.user;
   delete userResponse.password;
   res.json(userResponse);
 });
-
+// Add this to your existing users.js
+router.post('/recycle', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const pointsToAdd = 50;
+    user.glowPoints = (user.glowPoints || 0) + pointsToAdd;
+    await user.save();
+    
+    res.json({ 
+      success: true, 
+      glowPoints: user.glowPoints,
+      message: `Added ${pointsToAdd} GlowPoints for recycling!`
+    });
+  } catch (error) {
+    console.error('Recycle error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
 // PUT /api/auth/profile
 router.put('/profile', protect, async (req, res) => {
   try {

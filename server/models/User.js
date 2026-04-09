@@ -1,30 +1,44 @@
 const mongoose = require('mongoose');
-const bcrypt   = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 
 const voucherSchema = new mongoose.Schema({
-  code:      String,
-  discount:  Number,
-  isUsed:    { type: Boolean, default: false },
+  code: String,
+  discount: Number,
+  isUsed: { type: Boolean, default: false },
   expiresAt: Date,
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
-  name:     { type: String, required: true },
-  email:    { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: {
     type: String,
-    enum: ['user', 'admin', 'customer'],  // ✅ supports all three — 'user' is default
+    enum: ['user', 'admin', 'customer'],
     default: 'user'
   },
   address: {
     street: String, city: String, state: String,
     zipCode: String, country: String
   },
-  phone:      String,
-  // Add to your User.js schema
+  phone: String,
+  
+  // Quiz fields (for compatibility with quiz route)
+  skinType: { 
+    type: String, 
+    enum: ['oily', 'dry', 'combination', 'normal', 'sensitive'], 
+    default: null 
+  },
+  skinConcerns: [String],
+  hairConcerns: [String],
+  allergies: [String],
+  quizCompleted: { type: Boolean, default: false },
+  amRoutine: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+  pmRoutine: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+  
+  // Skin Profile for quiz recommendations (alternative structure)
   skinProfile: {
-    skinType: { type: String, enum: ['Oily','Dry','Combination','Normal','Sensitive', null], default: null },
+    skinType: { type: String, enum: ['oily', 'dry', 'combination', 'normal', 'sensitive'], default: null },
     concerns: [String],
     routine: {
       am: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
@@ -33,51 +47,47 @@ const userSchema = new mongoose.Schema({
   },
 
   // Glow Points & Loyalty
-  glowPoints:  { type: Number, default: 0 },
-  totalSpent:  { type: Number, default: 0 },
-  orderCount:  { type: Number, default: 0 },
-  loyaltyTier: { type: String, enum: ['bronze','silver','gold','platinum'], default: 'bronze' },
+  glowPoints: { type: Number, default: 0 },
+  totalSpent: { type: Number, default: 0 },
+  orderCount: { type: Number, default: 0 },
+  loyaltyTier: { type: String, enum: ['bronze', 'silver', 'gold', 'platinum'], default: 'bronze' },
 
   // Vouchers
   vouchers: [voucherSchema],
 
   lastLogin: Date,
-  isActive:  { type: Boolean, default: true },
+  isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
 // Hash password before save
-userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return;
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
-// Compare password (async)
-userSchema.methods.comparePasswordAsync = async function (candidate) {
+// Compare password
+userSchema.methods.comparePassword = async function(candidate) {
   return bcrypt.compare(candidate, this.password);
 };
 
-// Legacy callback version for compatibility
-userSchema.methods.comparePassword = function (candidate, callback) {
-  if (callback) {
-    bcrypt.compare(candidate, this.password, callback);
-  } else {
-    return bcrypt.compare(candidate, this.password);
-  }
-};
-
-// Update loyalty tier based on total spent (paise)
-userSchema.methods.updateLoyaltyTier = function () {
-  const spent = this.totalSpent / 100; // convert paise to rupees
-  if (spent >= 50000)      this.loyaltyTier = 'platinum';
+// Update loyalty tier based on total spent
+userSchema.methods.updateLoyaltyTier = function() {
+  const spent = this.totalSpent / 100;
+  if (spent >= 50000) this.loyaltyTier = 'platinum';
   else if (spent >= 20000) this.loyaltyTier = 'gold';
-  else if (spent >= 5000)  this.loyaltyTier = 'silver';
-  else                     this.loyaltyTier = 'bronze';
+  else if (spent >= 5000) this.loyaltyTier = 'silver';
+  else this.loyaltyTier = 'bronze';
 };
 
 // Strip password from JSON responses
 userSchema.set('toJSON', {
-  transform: function (doc, ret) {
+  transform: function(doc, ret) {
     delete ret.password;
     return ret;
   }

@@ -19,10 +19,9 @@ import Inventory        from './Inventory';
 import Customers        from './Customers';
 import SalesReport      from './SalesReport';
 import Security         from './Security';
-import Deployment       from './Deployment';
+import BIHub from './BIHub';
 import LegalDashboard   from './Legaldashboard';
-import RevenueDashboard from './RevenueDashboard';
-import MarketingDashboard from './MarketingDashboard';
+
 import SCMDashboard     from './SCMDashboard';
 import SellerManagement from './SellerManagement';
 
@@ -40,18 +39,14 @@ const NAV_ITEMS = [
   { path: 'sales',     label: 'Sales Report',    Icon: BarChart3 },
 
   // ── NEW ───────────────────────────────────────────────────────────────────
-  { path: 'erp',       label: 'ERP (Batch/BOM)', Icon: FlaskConical, isNew: true },
-  { path: 'crm',       label: 'CRM (Journey)',    Icon: Heart,        isNew: true },
+  { path: 'erp',       label: 'ERP', Icon: FlaskConical, isNew: true },
+  { path: 'crm',       label: 'CRM ',    Icon: Heart,        isNew: true },
   // ─────────────────────────────────────────────────────────────────────────
-
   { path: 'scm',       label: 'SCM / Suppliers', Icon: Truck },
-  { path: 'revenue',   label: 'Revenue',         Icon: TrendingUp },
-  { path: 'marketing', label: 'Marketing',       Icon: Megaphone },
+{ path: 'bi-hub', label: 'Business Intelligence', Icon: TrendingUp, isNew: true },
   { path: 'security',  label: 'Security',        Icon: Shield },
-  { path: 'legal',     label: 'Legal',           Icon: FileText },
-  { path: 'erp-integration', label: 'ERP Hub',  Icon: Database },
   { path: 'sellers',   label: 'Sellers',         Icon: Users },
-  { path: 'deployment',label: 'Deployment',      Icon: Cloud },
+   { path: 'legal',     label: 'Legal',           Icon: FileText },
 ];
 
 const AdminDashboard = () => {
@@ -161,12 +156,11 @@ const AdminDashboard = () => {
           <Route path="crm"               element={<CRMDashboard />} />
 
           <Route path="scm"               element={<SCMDashboard />} />
-          <Route path="revenue"           element={<RevenueDashboard />} />
-          <Route path="marketing"         element={<MarketingDashboard />} />
+          <Route path="bi-hub" element={<BIHub />} />
           <Route path="security"          element={<Security />} />
           <Route path="legal"             element={<LegalDashboard />} />
           <Route path="sellers"           element={<SellerManagement />} />
-          <Route path="deployment"        element={<Deployment />} />
+        
         </Routes>
       </main>
     </div>

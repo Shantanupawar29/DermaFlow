@@ -1,159 +1,178 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-  TrendingUp, Users, Package, ShieldCheck, 
-  Truck, Activity, Target, Recycle, 
-  BarChart3, PieChart, RefreshCw, AlertCircle
+  TrendingUp, Target, Cloud, BarChart3, 
+  Globe, Settings, ShieldCheck, Zap, 
+  Search, Users, Activity, PieChart, ArrowUpRight
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const API = 'http://localhost:5000/api/admin';
+const M = '#4A0E2E'; // Brand Maroon
 const tok = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-const MAROON = '#4A0E2E';
 
 export default function BIHub() {
-  const [activeTab, setActiveTab] = useState('revenue');
-  const [data, setData] = useState(null);
+  const [tab, setTab] = useState('financials');
   const [loading, setLoading] = useState(false);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`${API}/dashboard`, tok());
-      setData(res.data);
-    } catch (err) { console.error("BI Hub Fetch Error", err); }
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchData(); }, []);
-
-  const tabStyle = (id) => ({
-    padding: '10px 20px',
+  const tabStyle = (t) => ({
+    padding: '12px 24px',
+    borderRadius: '12px',
+    border: 'none',
     cursor: 'pointer',
-    borderBottom: activeTab === id ? `3px solid ${MAROON}` : '3px solid transparent',
-    color: activeTab === id ? MAROON : '#6b7280',
-    fontWeight: activeTab === id ? 'bold' : 'normal',
+    fontSize: '0.75rem',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    transition: '0.3s',
+    background: tab === t ? M : 'transparent',
+    color: tab === t ? '#fff' : '#6b7280',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    transition: '0.3s'
+    gap: '8px'
   });
 
-  if (!data && loading) return <div className="p-10 text-center">Synchronizing Enterprise Data...</div>;
-
   return (
-    <div style={{ padding: '25px', backgroundColor: '#fcfcfc', minHeight: '100vh' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px' }}>
+    <div className="p-8 max-w-7xl mx-auto bg-[#FCFAFA] min-h-screen font-sans">
+      {/* 1. Header */}
+      <header className="flex justify-between items-end mb-10">
         <div>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: MAROON, margin: 0 }}>Business Intelligence Hub</h1>
-          <p style={{ color: '#6b7280', margin: '5px 0' }}>Real-time integration across ERP, SCM, and CRM Pillars</p>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Business Intelligence</h1>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2 flex items-center gap-2">
+            <Activity size={14} className="text-green-500"/> Cross-Pillar Analytics Engine
+          </p>
         </div>
-        <button onClick={fetchData} style={{ background: MAROON, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} /> Refresh Sync
-        </button>
-      </div>
-
-      {/* Primary Navigation */}
-      <div style={{ display: 'flex', gap: '30px', borderBottom: '1px solid #e5e7eb', marginBottom: '30px' }}>
-        <div style={tabStyle('revenue')} onClick={() => setActiveTab('revenue')}><TrendingUp size={18}/> Financials (ERP)</div>
-        <div style={tabStyle('scm')} onClick={() => setActiveTab('scm')}><Truck size={18}/> Logistics (SCM)</div>
-        <div style={tabStyle('crm')} onClick={() => setActiveTab('crm')}><Users size={18}/> Growth (CRM)</div>
-      </div>
-
-      {/* ── REVENUE / ERP TAB ── */}
-      {activeTab === 'revenue' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-          <KPICard title="Net Revenue" value={`₹${Number(data?.totalRevenue || 0).toLocaleString()}`} icon={<BarChart3 color={MAROON}/>} />
-          <KPICard title="Avg Order Value" value={`₹${(data?.totalRevenue / (data?.totalOrders || 1)).toFixed(2)}`} icon={<Activity color={MAROON}/>} />
-          <KPICard title="Active Tiers" value="4 Levels" icon={<ShieldCheck color={MAROON}/>} />
-          <KPICard title="Sales Growth" value="+12.4%" icon={<TrendingUp color="#16a34a"/>} />
-          
-          <div style={{ gridColumn: 'span 4', background: '#fff', padding: '25px', borderRadius: '15px', border: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem' }}>Revenue Stream Analysis</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <StreamRow label="Direct Sales (B2C)" pct={78} color={MAROON} />
-              <StreamRow label="Subscription Recurring" pct={15} color="#1d4ed8" />
-              <StreamRow label="Affiliate/Referral" pct={7} color="#16a34a" />
-            </div>
-          </div>
+        <div className="flex bg-gray-100 p-1.5 rounded-2xl gap-1">
+          <button style={tabStyle('financials')} onClick={() => setTab('financials')}><TrendingUp size={14}/> Revenue</button>
+          <button style={tabStyle('growth')} onClick={() => setTab('growth')}><Target size={14}/> Growth</button>
+          <button style={tabStyle('cloud')} onClick={() => setTab('cloud')}><Cloud size={14}/> Infrastructure</button>
         </div>
-      )}
+      </header>
 
-      {/* ── SCM / LOGISTICS TAB ── */}
-      {activeTab === 'scm' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '25px' }}>
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', border: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <AlertCircle color="#dc2626" /> Critical Reorder Triggers
-            </h3>
-            {data?.lowStock?.map(p => (
-              <div key={p._id} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f3f4f6' }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{p.name}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#dc2626' }}>Stock: {p.stockQuantity} | Safety: {p.safetyThreshold}</div>
+      <AnimatePresence mode="wait">
+        <motion.div 
+          key={tab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          {/* ── TAB 1: FINANCIALS (Merged RevenueDashboard) ── */}
+          {tab === 'financials' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <KPICard title="Projected ARR" value="₹38.3L" icon={BarChart3} sub="Annual Target" />
+              <KPICard title="Avg Order Value" value="₹1,840" icon={Activity} sub="Last 30 Days" />
+              <KPICard title="Subscription Share" value="16%" icon={PieChart} sub="Recurring Revenue" />
+
+              <div className="md:col-span-3 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6">Primary Revenue Streams</h3>
+                <div className="space-y-6">
+                  <StreamBar label="Sales Revenue Model (Direct B2C)" pct={82} val="₹30.5L" color={M} />
+                  <StreamBar label="Subscription Model (Box)" pct={15} val="₹5.6L" color="#1d4ed8" />
+                  <StreamBar label="Affiliate Model (Influencer)" pct={3} val="₹2.1L" color="#047857" />
                 </div>
-                <button style={{ border: `1px solid ${MAROON}`, color: MAROON, background: 'transparent', padding: '5px 15px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                  Procure Items
-                </button>
               </div>
-            ))}
-          </div>
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', border: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem' }}>Fulfillment Status</h3>
-            {data?.recentOrders?.map(o => (
-              <div key={o._id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f9fafb' }}>
-                <span style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>#{o._id.slice(-6)}</span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: MAROON }}>{o.status.toUpperCase()}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      {/* ── CRM / GROWTH TAB ── */}
-      {activeTab === 'crm' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', border: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem' }}><Target size={18} style={{marginRight:'8px'}}/> Customer Segmentation</h3>
-            {/* Logic: Aggregates real user data by skin type */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <StreamRow label="Oily Skin Segment" pct={42} color={MAROON} />
-              <StreamRow label="Dry Skin Segment" pct={31} color="#1d4ed8" />
-              <StreamRow label="Sensitive/Combination" pct={27} color="#16a34a" />
-            </div>
-          </div>
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', border: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem' }}><Recycle size={18} style={{marginRight:'8px'}}/> Sustainability (Green Tier)</h3>
-            <div style={{ fontSize: '0.85rem', color: '#4b5563', lineHeight: '1.6' }}>
-              <p>User recycling activity directly influences <strong>CRM Loyalty Tiers</strong>. SCM verifies bottle returns at the warehouse, triggering automated Glow Point rewards.</p>
-              <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '10px', marginTop: '10px', color: '#166534' }}>
-                <strong>Recent Impact:</strong> 87 bottles recycled this month.
+          {/* ── TAB 2: GROWTH (Merged MarketingDashboard) ── */}
+          {tab === 'growth' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
+                  <Search size={16}/> SEO Keyword Ranking
+                </h3>
+                <div className="space-y-4">
+                  {['Niacinamide Serum', 'Hyaluronic Moisturizer', 'Beginner Retinol'].map((kw, i) => (
+                    <div key={kw} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl">
+                      <span className="text-sm font-bold text-gray-700">{kw}</span>
+                      <span className="text-xs font-black text-green-600 bg-white px-3 py-1 rounded-full shadow-sm">Rank #{i+2}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
+                  <Users size={16}/> Customer Acquisition
+                </h3>
+                <div className="space-y-4">
+                  <StreamBar label="Organic Search" pct={38} val="12k" color="#16a34a" />
+                  <StreamBar label="Email Automation" pct={26} val="8k" color={M} />
+                  <StreamBar label="Social / Reels" pct={22} val="5k" color="#d97706" />
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+
+          {/* ── TAB 3: INFRASTRUCTURE (Merged Deployment) ── */}
+          {tab === 'cloud' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <DeployCard title="Frontend" status="Live" platform="Vercel" icon={Globe} />
+                <DeployCard title="Backend API" status="Live" platform="Render" icon={Settings} />
+                <DeployCard title="Database" status="Connected" platform="Atlas" icon={ShieldCheck} />
+                <DeployCard title="SSL/Security" status="Active" platform="LetsEncrypt" icon={ShieldCheck} />
+              </div>
+              
+              <div className="bg-gray-900 p-8 rounded-[2.5rem] text-white">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-6">Production Environment Variables</h3>
+                <div className="bg-black/30 p-6 rounded-2xl font-mono text-xs text-green-400 overflow-x-auto">
+                  <div>API_GATEWAY=https://api.dermaflow.com</div>
+                  <div>DATABASE_CLUSTER=mongodb+srv://prod_main</div>
+                  <div>SECURITY_PROTOCOL=AES-256-GCM</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
 
-// Sub-components for clean code
-const KPICard = ({ title, value, icon }) => (
-  <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '15px', padding: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-    <div style={{ marginBottom: '15px' }}>{icon}</div>
-    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#111827' }}>{value}</div>
-    <div style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</div>
-  </div>
-);
+// ── Reusable Components ──
 
-const StreamRow = ({ label, pct, color }) => (
-  <div>
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px' }}>
-      <span>{label}</span>
-      <span style={{ fontWeight: 'bold' }}>{pct}%</span>
+function KPICard({ title, value, icon: Icon, sub }) {
+  return (
+    <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+      <div className="p-3 bg-gray-50 w-fit rounded-xl mb-4" style={{ color: M }}><Icon size={20}/></div>
+      <div className="text-2xl font-black text-gray-900">{value}</div>
+      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{title}</div>
+      <div className="text-[9px] font-black text-gray-300 uppercase mt-4">{sub}</div>
     </div>
-    <div style={{ height: '8px', background: '#f3f4f6', borderRadius: '10px', overflow: 'hidden' }}>
-      <div style={{ width: `${pct}%`, height: '100%', background: color }}></div>
+  );
+}
+
+function StreamBar({ label, pct, val, color }) {
+  return (
+    <div>
+      <div className="flex justify-between items-end mb-2">
+        <span className="text-xs font-black text-gray-700 uppercase tracking-tighter">{label}</span>
+        <span className="text-xs font-black text-gray-900">{val}</span>
+      </div>
+      <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+        <motion.div 
+          initial={{ width: 0 }} 
+          animate={{ width: `${pct}%` }} 
+          className="h-full rounded-full" 
+          style={{ background: color }}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+}
+
+function DeployCard({ title, status, platform, icon: Icon }) {
+  return (
+    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+      <div className="p-2 bg-gray-50 rounded-lg" style={{ color: M }}><Icon size={18}/></div>
+      <div>
+        <div className="text-[10px] font-black text-gray-900 uppercase">{title}</div>
+        <div className="text-[9px] font-bold text-green-600 uppercase flex items-center gap-1">
+          <div className="w-1 h-1 bg-green-500 rounded-full" /> {status}
+        </div>
+        <div className="text-[9px] font-bold text-gray-300 uppercase">{platform}</div>
+      </div>
+    </div>
+  );
+}

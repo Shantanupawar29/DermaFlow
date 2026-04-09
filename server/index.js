@@ -9,7 +9,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+  console.log(`📌 ${req.method} ${req.url}`);
+  next();
+});
 
+// ✅ ADD GLOBAL ERROR HANDLER AFTER ALL ROUTES (at the bottom of index.js, before mongoose.connect)
+app.use((err, req, res, next) => {
+  console.error('❌ Global error handler caught:', err);
+  console.error('Stack:', err.stack);
+  res.status(500).json({ 
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
 // ✅ ROUTES IMPORT
 const productRoutes    = require('./routes/products');
 const authRoutes       = require('./routes/auth');

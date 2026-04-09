@@ -21,9 +21,9 @@ const userSchema = new mongoose.Schema({
     street: String, city: String, state: String,
     zipCode: String, country: String
   },
+  addresses: [{ type: Object, default: [] }],
   phone: String,
   
-  // Quiz fields (for compatibility with quiz route)
   skinType: { 
     type: String, 
     enum: ['oily', 'dry', 'combination', 'normal', 'sensitive'], 
@@ -36,7 +36,6 @@ const userSchema = new mongoose.Schema({
   amRoutine: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   pmRoutine: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   
-  // Skin Profile for quiz recommendations (alternative structure)
   skinProfile: {
     skinType: { type: String, enum: ['oily', 'dry', 'combination', 'normal', 'sensitive'], default: null },
     concerns: [String],
@@ -46,37 +45,61 @@ const userSchema = new mongoose.Schema({
     }
   },
 
-  // Glow Points & Loyalty
   glowPoints: { type: Number, default: 0 },
+  recycledBottles: { type: Number, default: 0 },
   totalSpent: { type: Number, default: 0 },
   orderCount: { type: Number, default: 0 },
   loyaltyTier: { type: String, enum: ['bronze', 'silver', 'gold', 'platinum'], default: 'bronze' },
 
-  // Vouchers
   vouchers: [voucherSchema],
 
   lastLogin: Date,
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
-// Hash password before save
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (err) {
-    next(err);
-  }
+// SIMPLE PRE-SAVE HOOK - No async/await, just callbacks
+// userSchema.pre('save', function(next) {
+//   const user = this;
+  
+//   if (!user.isModified('password')) {
+//     return next();
+//   }
+  
+//   bcrypt.genSalt(10, (err, salt) => {
+//     if (err) return next(err);
+    
+//     bcrypt.hash(user.password, salt, (err, hash) => {
+//       if (err) return next(err);
+//       user.password = hash;
+//       next();
+//     });
+//   });
+// });
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
+
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Compare password
-userSchema.methods.comparePassword = async function(candidate) {
-  return bcrypt.compare(candidate, this.password);
+// SIMPLE COMPARE METHOD - Using callback
+userSchema.methods.comparePassword = function(candidatePassword, callback) {
+  bcrypt.compare(candidatePassword, this.password, (err, isMatch) => {
+    if (err) return callback(err);
+    callback(null, isMatch);
+  });
 };
 
-// Update loyalty tier based on total spent
+// Add promise wrapper for async/await support
+userSchema.methods.comparePasswordAsync = function(candidatePassword) {
+  return new Promise((resolve, reject) => {
+    bcrypt.compare(candidatePassword, this.password, (err, isMatch) => {
+      if (err) reject(err);
+      else resolve(isMatch);
+    });
+  });
+};
+
 userSchema.methods.updateLoyaltyTier = function() {
   const spent = this.totalSpent / 100;
   if (spent >= 50000) this.loyaltyTier = 'platinum';
@@ -85,7 +108,6 @@ userSchema.methods.updateLoyaltyTier = function() {
   else this.loyaltyTier = 'bronze';
 };
 
-// Strip password from JSON responses
 userSchema.set('toJSON', {
   transform: function(doc, ret) {
     delete ret.password;
@@ -93,4 +115,4 @@ userSchema.set('toJSON', {
   }
 });
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.models.User || mongoose.model('User', userSchema);

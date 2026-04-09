@@ -20,7 +20,6 @@ import Customers        from './Customers';
 import SalesReport      from './SalesReport';
 import Security         from './Security';
 import Deployment       from './Deployment';
-import ERPIntegration   from './ERPIntegration';
 import LegalDashboard   from './Legaldashboard';
 import RevenueDashboard from './RevenueDashboard';
 import MarketingDashboard from './MarketingDashboard';
@@ -166,7 +165,6 @@ const AdminDashboard = () => {
           <Route path="marketing"         element={<MarketingDashboard />} />
           <Route path="security"          element={<Security />} />
           <Route path="legal"             element={<LegalDashboard />} />
-          <Route path="erp-integration"   element={<ERPIntegration />} />
           <Route path="sellers"           element={<SellerManagement />} />
           <Route path="deployment"        element={<Deployment />} />
         </Routes>

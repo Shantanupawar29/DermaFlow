@@ -3,6 +3,8 @@ const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const AuditLog = require('../models/AuditLog');
+const aiService = require('../services/aiService');
 const { protect } = require('../middleware/auth');
 
 const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -52,36 +54,48 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+// POST /api/auth/update-skin-profile
 router.post('/update-skin-profile', protect, async (req, res) => {
-  const { answers } = req.body;
-  const user = await User.findById(req.user._id);
+  try {
+    const { answers } = req.body;
+    const user = await User.findById(req.user._id);
 
-  // Update basic info
-  user.skinProfile.skinType = answers.skinType;
-  user.skinProfile.concerns = answers.concerns;
+    // Update basic info
+    user.skinProfile.skinType = answers.skinType;
+    user.skinProfile.concerns = answers.concerns;
 
-  // Call the AI Service to generate the routine based on their answers
-  const { am, pm } = await aiService.generateRoutine(answers.skinType, answers.concerns);
-  
-  user.skinProfile.routine = { am, pm };
-  await user.save();
+    // Call the AI Service to generate the routine based on their answers
+    const { am, pm } = await aiService.generateRoutine(answers.skinType, answers.concerns);
+    
+    user.skinProfile.routine = { am, pm };
+    await user.save();
 
-  res.json({ success: true, user });
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('Update skin profile error:', error);
+    res.status(500).json({ message: error.message });
+  }
 });
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
+    if (!email || !password) {
       return res.status(400).json({ message: 'Email and password required' });
+    }
 
-    const user = await User.findOne({ email }).select('+password');
-    if (!user)
-      return res.status(400).json({ message: 'Invalid email or password' });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      return res.status(400).json({ message: 'Invalid email or password' });
+    // Use the comparePassword method
+    const isMatch = await user.comparePasswordAsync(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
 
     user.lastLogin = new Date();
     await user.save();
@@ -96,63 +110,57 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
 // 1. Update User Address (SCM/CRM Pillar)
 router.put('/address', protect, async (req, res) => {
-    try {
-        const user = await User.findById(req.user._id);
-        user.addresses.push(req.body.address); // Make sure your User model has an 'addresses' array
-        await user.save();
-        res.json({ success: true, user });
-    } catch (error) { res.status(500).json({ message: error.message }); }
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user.addresses) user.addresses = [];
+    user.addresses.push(req.body.address);
+    await user.save();
+    res.json({ success: true, user });
+  } catch (error) { 
+    res.status(500).json({ message: error.message }); 
+  }
 });
 
 // 2. Recycle Plastic Trigger (CRM/Sustainability Pillar)
 router.post('/recycle', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const pointsToAdd = 50;
+    
+    user.glowPoints = (user.glowPoints || 0) + pointsToAdd;
+    user.recycledBottles = (user.recycledBottles || 0) + 1;
+    
+    await user.save();
+
+    // SECURITY: Log this point change (if AuditLog model exists)
     try {
-        const user = await User.findById(req.user._id);
-        const pointsToAdd = 20; // Example: 20 points per bottle
-        
-        user.glowPoints += pointsToAdd;
-        user.recycledBottles = (user.recycledBottles || 0) + 1;
-        
-        await user.save();
+      await AuditLog.create({
+        action: 'UPDATE_USER_DATA',
+        targetName: user.name,
+        description: `User recycled a bottle. Earned ${pointsToAdd} points.`,
+        riskLevel: 'low',
+        dataCategory: 'personal_data'
+      });
+    } catch (logError) {
+      console.log('Audit log not available');
+    }
 
-        // SECURITY: Log this point change
-        await AuditLog.create({
-            action: 'UPDATE_USER_DATA',
-            targetName: user.name,
-            description: `User recycled a bottle. Earned ${pointsToAdd} points.`,
-            riskLevel: 'low',
-            dataCategory: 'personal_data'
-        });
-
-        res.json({ success: true, glowPoints: user.glowPoints });
-    } catch (error) { res.status(500).json({ message: error.message }); }
+    res.json({ success: true, glowPoints: user.glowPoints });
+  } catch (error) { 
+    res.status(500).json({ message: error.message }); 
+  }
 });
+
 // GET /api/auth/me
 router.get('/me', protect, (req, res) => {
   const userResponse = req.user.toObject ? req.user.toObject() : req.user;
   delete userResponse.password;
   res.json(userResponse);
 });
-// Add this to your existing users.js
-router.post('/recycle', protect, async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    const pointsToAdd = 50;
-    user.glowPoints = (user.glowPoints || 0) + pointsToAdd;
-    await user.save();
-    
-    res.json({ 
-      success: true, 
-      glowPoints: user.glowPoints,
-      message: `Added ${pointsToAdd} GlowPoints for recycling!`
-    });
-  } catch (error) {
-    console.error('Recycle error:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
+
 // PUT /api/auth/profile
 router.put('/profile', protect, async (req, res) => {
   try {

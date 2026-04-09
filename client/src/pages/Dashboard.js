@@ -1,181 +1,110 @@
+// client/src/pages/Dashboard.js
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Sun, Moon, Sparkles, Recycle, Gift, Star, Trophy, 
-  ShoppingBag, Package, Zap, Wallet, Box, Ticket, 
-  LogOut, Check, ChevronRight, Clock, Award, Users,
-  Heart, Shield, TrendingUp, Calendar
+import {
+  Sun, Moon, Sparkles, Recycle, Gift, Star, Trophy,
+  ShoppingBag, Package, Wallet, Box, Ticket,
+  LogOut, Check, ChevronRight, Award, Calendar,
+  Heart, Shield, ArrowRight, Clock, Zap, Copy
 } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api';
+const M = '#4A0E2E';
 
-const TIER_STYLE = {
-  bronze:   { color: '#cd7f32', bg: '#fef3c7', bar: '#f59e0b', label: 'Bronze', next: 'Spend ₹5,000 for Silver' },
-  silver:   { color: '#94a3b8', bg: '#f1f5f9', bar: '#94a3b8', label: 'Silver', next: 'Spend ₹20,000 for Gold' },
-  gold:     { color: '#d4af37', bg: '#fefce8', bar: '#eab308', label: 'Gold', next: 'Spend ₹50,000 for Platinum' },
-  platinum: { color: '#7c3aed', bg: '#ede9fe', bar: '#8b5cf6', label: 'Platinum', next: "You're at the top tier!" },
+const TIER = {
+  bronze:   { color: '#d97706', bg: '#fef3c7', bar: '#f59e0b', label: 'Bronze', min: 0,    max: 500 },
+  silver:   { color: '#64748b', bg: '#f1f5f9', bar: '#94a3b8', label: 'Silver', min: 500,  max: 1000 },
+  gold:     { color: '#b45309', bg: '#fefce8', bar: '#eab308', label: 'Gold',   min: 1000, max: 2000 },
+  platinum: { color: '#7c3aed', bg: '#ede9fe', bar: '#8b5cf6', label: 'Platinum', min: 2000, max: 2000 },
 };
 
-const STATUS_STYLE = {
-  pending:    { bg: '#fefce8', color: '#d97706' },
-  processing: { bg: '#eff6ff', color: '#1d4ed8' },
-  confirmed:  { bg: '#f0fdf4', color: '#16a34a' },
-  shipped:    { bg: '#f0fdfa', color: '#0d9488' },
-  delivered:  { bg: '#dcfce7', color: '#15803d' },
-  cancelled:  { bg: '#fef2f2', color: '#dc2626' },
+const ORDER_STATUS = {
+  pending:    { bg: '#fefce8', color: '#d97706', label: 'Pending' },
+  processing: { bg: '#eff6ff', color: '#1d4ed8', label: 'Processing' },
+  confirmed:  { bg: '#f0fdf4', color: '#16a34a', label: 'Confirmed' },
+  shipped:    { bg: '#f0fdfa', color: '#0d9488', label: 'Shipped' },
+  delivered:  { bg: '#dcfce7', color: '#15803d', label: 'Delivered' },
+  cancelled:  { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
 };
-
-function Tab({ label, active, onClick }) {
-  return (
-    <button 
-      onClick={onClick} 
-      style={{ 
-        padding: '0.5rem 1.25rem', 
-        borderRadius: '9999px', 
-        border: 'none', 
-        cursor: 'pointer', 
-        fontSize: '0.85rem', 
-        fontWeight: 600,
-        background: active ? '#7B2D3C' : 'transparent',
-        color: active ? '#fff' : '#6b7280',
-        transition: 'all 0.2s'
-      }}
-    >
-      {label}
-    </button>
-  );
-}
 
 function StatCard({ icon: Icon, label, value, color }) {
   return (
-    <div style={{ 
-      background: '#fff', 
-      border: '1px solid #f3f4f6', 
-      borderRadius: '1rem', 
-      padding: '1.25rem',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-    }}>
-      <div style={{ color: color || '#6b7280', marginBottom: '0.5rem' }}>
-        <Icon size={20} />
+    <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '18px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', flex: 1, minWidth: 130 }}>
+      <div style={{ background: color ? `${color}15` : '#f3f4f6', borderRadius: 9, padding: 8, display: 'inline-flex', marginBottom: 10 }}>
+        <Icon size={16} color={color || '#6b7280'} />
       </div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: color || '#1f2937', lineHeight: 1.2 }}>
-        {value}
-      </div>
-      <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.3rem' }}>
-        {label}
-      </div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: color || '#1f2937', lineHeight: 1.1, marginBottom: 3 }}>{value}</div>
+      <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500 }}>{label}</div>
     </div>
   );
 }
 
-function RewardCard({ points, label, description, icon: Icon, currentPoints, earned }) {
-  const progress = Math.min((currentPoints / points) * 100, 100);
-  
+function Tab({ label, active, onClick, icon: Icon }) {
   return (
-    <div style={{ 
-      background: earned ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : '#fff',
-      border: earned ? '2px solid #86efac' : '1px solid #f3f4f6',
-      borderRadius: '1rem',
-      padding: '1.25rem',
-      position: 'relative'
+    <button onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', gap: 5,
+      padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+      fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
+      background: active ? M : 'transparent',
+      color: active ? '#fff' : '#6b7280',
+    }}>
+      {Icon && <Icon size={13} />}{label}
+    </button>
+  );
+}
+
+function RewardCard({ points, label, description, icon: Icon, currentPoints }) {
+  const earned = currentPoints >= points;
+  const progress = Math.min((currentPoints / Math.max(points, 1)) * 100, 100);
+  return (
+    <div style={{
+      background: earned ? '#f0fdf4' : '#fff',
+      border: earned ? '1.5px solid #86efac' : '1px solid #f0f0f0',
+      borderRadius: 14, padding: '18px', position: 'relative',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
     }}>
       {earned && (
-        <div style={{ 
-          position: 'absolute', 
-          top: 10, 
-          right: 10, 
-          background: '#16a34a', 
-          color: '#fff', 
-          borderRadius: '999px', 
-          padding: '0.15rem 0.5rem', 
-          fontSize: '0.65rem', 
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '2px'
-        }}>
-          <Check size={10} /> Earned
+        <div style={{ position: 'absolute', top: 10, right: 10, background: '#16a34a', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Check size={9} /> Earned
         </div>
       )}
-      <div style={{ color: earned ? '#16a34a' : '#7B2D3C', marginBottom: '0.5rem' }}>
-        <Icon size={24} />
-      </div>
-      <div style={{ fontWeight: 700, color: '#1f2937', marginBottom: '0.2rem', fontSize: '0.9rem' }}>
-        {label}
-      </div>
-      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-        {description}
-      </div>
+      <div style={{ color: earned ? '#16a34a' : M, marginBottom: 8 }}><Icon size={22} /></div>
+      <div style={{ fontWeight: 700, color: '#1f2937', marginBottom: 3, fontSize: 13 }}>{label}</div>
+      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: earned ? 0 : 10 }}>{description}</div>
       {!earned && (
-        <div style={{ marginTop: '0.75rem' }}>
-          <div style={{ background: '#e5e7eb', borderRadius: '999px', height: 5, overflow: 'hidden' }}>
-            <div style={{ height: 5, background: '#7B2D3C', width: `${progress}%`, borderRadius: '999px' }} />
+        <>
+          <div style={{ background: '#e5e7eb', borderRadius: 999, height: 5, overflow: 'hidden', marginBottom: 4 }}>
+            <div style={{ height: 5, background: M, width: `${progress}%`, borderRadius: 999, transition: 'width 0.8s ease' }} />
           </div>
-          <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.3rem' }}>
-            {currentPoints} / {points} pts
-          </div>
-        </div>
+          <div style={{ fontSize: 10, color: '#9ca3af' }}>{currentPoints} / {points} pts</div>
+        </>
       )}
     </div>
   );
 }
 
 function VoucherCard({ voucher }) {
-  const copyCode = () => {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
     navigator.clipboard.writeText(voucher.code);
-    alert('Voucher code copied!');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
-
   return (
-    <div style={{ 
-      background: 'linear-gradient(135deg, #7B2D3C, #4A0E2E)', 
-      borderRadius: '1.25rem', 
-      padding: '1.5rem', 
-      color: '#fff',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      <div style={{ position: 'absolute', top: -24, right: -24, width: 96, height: 96, background: 'rgba(255,255,255,0.06)', borderRadius: '50%' }} />
-      <Gift size={28} color="rgba(255,255,255,0.9)" />
-      <div style={{ fontSize: '2rem', fontWeight: 900, margin: '0.5rem 0 0.25rem' }}>
-        {voucher.discount}% OFF
-      </div>
-      <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', marginBottom: '1rem' }}>
-        On your order · Min spend ₹999
-      </div>
-      <div style={{ 
-        background: 'rgba(255,255,255,0.12)', 
-        borderRadius: '0.6rem', 
-        padding: '0.6rem 0.875rem', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '0.75rem'
-      }}>
-        <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1rem', letterSpacing: '0.12em' }}>
-          {voucher.code}
-        </span>
-        <button 
-          onClick={copyCode}
-          style={{ 
-            background: 'rgba(255,255,255,0.2)', 
-            border: 'none', 
-            color: '#fff', 
-            borderRadius: '0.35rem', 
-            padding: '0.25rem 0.6rem', 
-            cursor: 'pointer', 
-            fontSize: '0.7rem', 
-            fontWeight: 700 
-          }}
-        >
-          Copy
+    <div style={{ background: `linear-gradient(135deg, ${M}, #7B2D3C)`, borderRadius: 16, padding: '20px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.06)', borderRadius: '50%' }} />
+      <Gift size={24} color="rgba(255,255,255,0.85)" style={{ marginBottom: 10 }} />
+      <div style={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1, marginBottom: 3 }}>{voucher.discount}% OFF</div>
+      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 14 }}>Min spend ₹999</div>
+      <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 14, letterSpacing: '0.1em' }}>{voucher.code}</span>
+        <button onClick={copy} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: 5, padding: '3px 8px', cursor: 'pointer', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
+          {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
         </button>
       </div>
-      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)' }}>
-        Expires: {new Date(voucher.expiresAt).toLocaleDateString('en-IN')}
-      </div>
+      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Expires: {new Date(voucher.expiresAt).toLocaleDateString('en-IN')}</div>
     </div>
   );
 }
@@ -183,321 +112,273 @@ function VoucherCard({ voucher }) {
 export default function Dashboard() {
   const { user, isAuthenticated, logout } = useAuth();
   const [userData, setUserData] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [routine, setRoutine] = useState({ amRoutine: [], pmRoutine: [] });
-  const [loading, setLoading] = useState(true);
-  const [recycling, setRecycling] = useState(false);
-  const [tab, setTab] = useState('overview');
+  const [orders, setOrders]     = useState([]);
+  const [routine, setRoutine]   = useState({ amRoutine: [], pmRoutine: [] });
+  const [loading, setLoading]   = useState(true);
+  const [tab, setTab]           = useState('overview');
 
   useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-      fetchRoutine();
-    }
+    if (user) { fetchData(); fetchRoutine(); }
   }, [user]);
 
-  const fetchDashboardData = async () => {
+  const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const [userRes, ordersRes] = await Promise.all([
-        axios.get(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_URL}/orders/my-orders`, { headers: { Authorization: `Bearer ${token}` } })
+      const h = { headers: { Authorization: `Bearer ${token}` } };
+      const [uRes, oRes] = await Promise.all([
+        axios.get(`${API_URL}/auth/me`, h),
+        axios.get(`${API_URL}/orders/my-orders`, h),
       ]);
-      setUserData(userRes.data);
-      setOrders(ordersRes.data);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
+      setUserData(uRes.data);
+      setOrders(oRes.data);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
   const fetchRoutine = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/quiz/routine`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setRoutine(response.data);
-    } catch (error) {
-      console.error('Error fetching routine:', error);
-    }
+      const r = await axios.get(`${API_URL}/quiz/routine`, { headers: { Authorization: `Bearer ${token}` } });
+      setRoutine(r.data);
+    } catch (e) { /* quiz not completed yet */ }
   };
 
-  const handleRecycle = async () => {
-    setRecycling(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_URL}/users/recycle`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUserData(prev => ({ ...prev, glowPoints: response.data.glowPoints }));
-      alert('+50 GlowPoints added for recycling! Thank you for being eco-friendly!');
-      fetchDashboardData();
-    } catch (error) {
-      console.error('Recycling error:', error);
-      alert('Failed to add points. Please try again.');
-    } finally {
-      setRecycling(false);
-    }
-  };
-
-  if (!isAuthenticated || !user) {
-    return <Navigate to="/login" />;
-  }
+  if (!isAuthenticated || !user) return <Navigate to="/login" />;
 
   const cu = userData || user;
   const points = cu.glowPoints || 0;
-  const totalSpent = orders.reduce((sum, order) => sum + (order.grandTotal || order.totalAmount || 0), 0);
-  
-  // Determine tier
-  let tier = TIER_STYLE.bronze;
-  if (points >= 2000) tier = TIER_STYLE.platinum;
-  else if (points >= 1000) tier = TIER_STYLE.gold;
-  else if (points >= 500) tier = TIER_STYLE.silver;
-  
-  const progressToNext = points >= 2000 ? 100 : (points / 2000) * 100;
+  const totalSpent = orders.reduce((s, o) => s + (o.grandTotal || o.totalAmount || 0), 0);
+
+  const tierKey = points >= 2000 ? 'platinum' : points >= 1000 ? 'gold' : points >= 500 ? 'silver' : 'bronze';
+  const tier = TIER[tierKey];
+  const nextTier = { bronze: TIER.silver, silver: TIER.gold, gold: TIER.platinum, platinum: null }[tierKey];
+  const progressPct = nextTier ? Math.min(((points - tier.min) / (nextTier.min - tier.min)) * 100, 100) : 100;
+
   const activeVouchers = (cu.vouchers || []).filter(v => !v.isUsed && new Date(v.expiresAt) > new Date());
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div style={{ color: '#6b7280' }}>Loading dashboard...</div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: '#9ca3af', fontSize: 14 }}>
+      Loading dashboard...
+    </div>
+  );
+
+  const TABS = [
+    { k: 'overview', l: 'Overview', I: Zap },
+    { k: 'routine',  l: 'My Routine', I: Sun },
+    { k: 'orders',   l: 'Orders', I: Package },
+    { k: 'rewards',  l: 'Rewards', I: Award },
+    { k: 'vouchers', l: 'Vouchers', I: Ticket },
+  ];
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1rem' }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1rem', fontFamily: 'system-ui, sans-serif' }}>
+
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ 
-            width: 56, height: 56, borderRadius: '50%', 
-            background: 'linear-gradient(135deg, #7B2D3C, #4A0E2E)', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', 
-            color: '#fff', fontWeight: 800, fontSize: '1.2rem' 
-          }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', background: `linear-gradient(135deg, ${M}, #7B2D3C)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>
             {cu.name?.[0]?.toUpperCase() || 'U'}
           </div>
           <div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1f2937', margin: 0 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 800, color: '#1f2937', margin: 0 }}>
               Hello, {cu.name?.split(' ')[0]}!
             </h1>
-            <p style={{ color: '#9ca3af', fontSize: '0.8rem', margin: 0 }}>{cu.email}</p>
+            <p style={{ color: '#9ca3af', fontSize: 11, margin: 0 }}>{cu.email}</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <Link to="/products" style={{ 
-            display: 'flex', alignItems: 'center', gap: '0.5rem', 
-            padding: '0.5rem 1.25rem', background: '#7B2D3C', color: '#fff', 
-            borderRadius: '0.6rem', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 
-          }}>
-            <ShoppingBag size={16} /> Shop
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link to="/products" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: M, color: '#fff', borderRadius: 9, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
+            <ShoppingBag size={14} /> Shop
           </Link>
-          <button onClick={() => { logout(); }} style={{ 
-            display: 'flex', alignItems: 'center', gap: '0.5rem', 
-            padding: '0.5rem 1.25rem', border: '1px solid #e5e7eb', 
-            borderRadius: '0.6rem', background: '#fff', color: '#6b7280', 
-            cursor: 'pointer', fontSize: '0.85rem', fontWeight: 500 
-          }}>
-            <LogOut size={16} /> Sign Out
+          <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', border: '1px solid #e5e7eb', borderRadius: 9, background: '#fff', color: '#6b7280', cursor: 'pointer', fontSize: 13 }}>
+            <LogOut size={14} /> Sign Out
           </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        <StatCard icon={Star} label="Glow Points" value={points} color="#7B2D3C" />
-        <StatCard icon={Package} label="Orders" value={orders.length} color="#1d4ed8" />
-        <StatCard icon={Wallet} label="Total Spent" value={`₹${totalSpent.toFixed(0)}`} color="#047857" />
-        <StatCard icon={Award} label="Loyalty Tier" value={tier.label} color={tier.color} />
+      {/* Stats */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+        <StatCard icon={Star}    label="Glow Points"  value={points}                      color={M} />
+        <StatCard icon={Package} label="Orders"       value={orders.length}               color="#1d4ed8" />
+        <StatCard icon={Wallet}  label="Total Spent"  value={`₹${Math.round(totalSpent).toLocaleString('en-IN')}`} color="#047857" />
+        <StatCard icon={Award}   label="Loyalty Tier" value={tier.label}                  color={tier.color} />
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.25rem', background: '#f3f4f6', borderRadius: '9999px', padding: '0.3rem', width: 'fit-content', marginBottom: '1.5rem' }}>
-        {['overview', 'routine', 'orders', 'rewards', 'vouchers'].map(t => (
-          <Tab key={t} label={t.charAt(0).toUpperCase() + t.slice(1)} active={tab === t} onClick={() => setTab(t)} />
+      <div style={{ display: 'flex', gap: 4, background: '#f3f4f6', borderRadius: 10, padding: 4, width: 'fit-content', marginBottom: 20, flexWrap: 'wrap' }}>
+        {TABS.map(({ k, l, I }) => (
+          <Tab key={k} label={l} active={tab === k} onClick={() => setTab(k)} icon={I} />
         ))}
       </div>
 
-      {/* Overview Tab */}
+      {/* ── OVERVIEW ── */}
       {tab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Loyalty Card */}
-          <div style={{ 
-            background: `linear-gradient(135deg, ${tier.bg}, #fff)`, 
-            border: `1.5px solid ${tier.color}30`, 
-            borderRadius: '1.25rem', 
-            padding: '1.5rem' 
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Loyalty card */}
+          <div style={{ background: tier.bg, border: `1.5px solid ${tier.color}30`, borderRadius: 16, padding: '20px 24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, color: tier.color, fontSize: '0.9rem' }}>
-                  <Trophy size={16} /> {tier.label.toUpperCase()}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 800, color: tier.color, fontSize: 13, marginBottom: 3 }}>
+                  <Trophy size={15} /> {tier.label.toUpperCase()} MEMBER
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.2rem' }}>{tier.next}</div>
+                <div style={{ fontSize: 11, color: '#6b7280' }}>
+                  {nextTier ? `${nextTier.min - points} pts to ${nextTier.label}` : "Top tier — maximum rewards unlocked!"}
+                </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: tier.color, lineHeight: 1.2 }}>{points}</div>
-                <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>Glow Points</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: tier.color, lineHeight: 1 }}>{points}</div>
+                <div style={{ fontSize: 10, color: '#9ca3af' }}>Glow Points</div>
               </div>
             </div>
-            <div style={{ background: '#e5e7eb', borderRadius: '999px', height: 8, overflow: 'hidden' }}>
-              <div style={{ height: 8, background: tier.bar, width: `${progressToNext}%`, borderRadius: '999px', transition: 'width 0.8s ease' }} />
+            <div style={{ background: '#e5e7eb', borderRadius: 999, height: 8, overflow: 'hidden', marginBottom: 6 }}>
+              <div style={{ height: 8, background: tier.bar, width: `${progressPct}%`, borderRadius: 999, transition: 'width 0.8s ease' }} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.7rem', color: '#9ca3af' }}>
-              <span>₹{totalSpent.toFixed(0)} spent</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#9ca3af' }}>
+              <span>₹{Math.round(totalSpent).toLocaleString('en-IN')} spent</span>
               <span>500 pts = ₹50 off</span>
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-            <div style={{ background: '#fff', border: '1px solid #f3f4f6', borderRadius: '1.25rem', padding: '1.25rem' }}>
-              <h3 style={{ fontWeight: 700, marginBottom: '0.75rem', fontSize: '0.95rem' }}>Quick Actions</h3>
-              <Link to="/products" style={{ 
-                display: 'flex', alignItems: 'center', gap: '0.6rem', 
-                background: '#f9fafb', borderRadius: '0.6rem', padding: '0.6rem 0.875rem', 
-                textDecoration: 'none', color: '#374151', fontSize: '0.85rem', fontWeight: 500,
-                marginBottom: '0.5rem', border: '1px solid #f3f4f6'
-              }}>
-                <ShoppingBag size={16} color="#7B2D3C" /> Browse Products
-              </Link>
-              <Link to="/quiz" style={{ 
-                display: 'flex', alignItems: 'center', gap: '0.6rem', 
-                background: '#f9fafb', borderRadius: '0.6rem', padding: '0.6rem 0.875rem', 
-                textDecoration: 'none', color: '#374151', fontSize: '0.85rem', fontWeight: 500,
-                border: '1px solid #f3f4f6'
-              }}>
-                <Sparkles size={16} color="#7B2D3C" /> Retake Quiz
-              </Link>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+            {/* Quick actions */}
+            <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, color: '#1f2937', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Zap size={14} color={M} /> Quick Actions
+              </div>
+              {[
+                { to: '/products', label: 'Browse Products', icon: ShoppingBag },
+                { to: '/quiz',     label: 'Take Skin Quiz',  icon: Sparkles },
+              ].map(({ to, label, icon: Icon }) => (
+                <Link key={to} to={to} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f9fafb', borderRadius: 8, padding: '9px 12px', textDecoration: 'none', color: '#374151', fontSize: 13, fontWeight: 500, marginBottom: 6, border: '1px solid #f3f4f6', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Icon size={14} color={M} /> {label}
+                  </div>
+                  <ArrowRight size={12} color="#d1d5db" />
+                </Link>
+              ))}
             </div>
 
-            {/* Latest Order */}
+            {/* Latest order */}
             {orders.length > 0 && (
-              <div style={{ background: '#fff', border: '1px solid #f3f4f6', borderRadius: '1.25rem', padding: '1.25rem' }}>
-                <h3 style={{ fontWeight: 700, marginBottom: '0.75rem', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Package size={16} color="#7B2D3C" /> Latest Order
-                </h3>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.3rem' }}>
+              <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, color: '#1f2937', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Package size={14} color={M} /> Latest Order
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
                   #{orders[0].orderNumber || orders[0]._id.slice(-8).toUpperCase()}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                  {orders[0].items?.map(i => i.name).join(', ') || '—'}
+                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
+                  {orders[0].items?.map(i => i.name).slice(0, 2).join(', ')}{orders[0].items?.length > 2 ? ` +${orders[0].items.length - 2} more` : ''}
                 </div>
-                <div style={{ fontWeight: 800, color: '#7B2D3C' }}>₹{orders[0].grandTotal?.toFixed(2) || orders[0].totalAmount?.toFixed(2)}</div>
-                <button onClick={() => setTab('orders')} style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#7B2D3C', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-                  View all orders →
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontWeight: 800, color: M, fontSize: 15 }}>₹{(orders[0].grandTotal || orders[0].totalAmount || 0).toLocaleString('en-IN')}</div>
+                  <span style={{
+                    background: (ORDER_STATUS[orders[0].status] || ORDER_STATUS.pending).bg,
+                    color: (ORDER_STATUS[orders[0].status] || ORDER_STATUS.pending).color,
+                    fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999
+                  }}>
+                    {(ORDER_STATUS[orders[0].status] || ORDER_STATUS.pending).label.toUpperCase()}
+                  </span>
+                </div>
+                <button onClick={() => setTab('orders')} style={{ marginTop: 10, fontSize: 11, color: M, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+                  View all orders <ChevronRight size={11} />
                 </button>
               </div>
             )}
+
+            {/* Points perks */}
+            <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, color: '#1f2937', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Heart size={14} color={M} /> Earn More Points
+              </div>
+              {[
+                { label: 'Place an order', pts: '+10 pts/₹100' },
+                { label: 'Write a review', pts: '+25 pts' },
+                { label: 'Refer a friend', pts: '+200 pts' },
+                { label: 'Recycle bottle', pts: '+50 pts' },
+              ].map(({ label, pts }) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f9fafb', fontSize: 12 }}>
+                  <span style={{ color: '#4b5563' }}>{label}</span>
+                  <span style={{ fontWeight: 700, color: M }}>{pts}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Routine Tab */}
+      {/* ── ROUTINE ── */}
       {tab === 'routine' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-          {/* AM Routine */}
-          <div style={{ background: '#fff', borderRadius: '1rem', border: '1px solid #f3f4f6', overflow: 'hidden' }}>
-            <div style={{ background: 'linear-gradient(135deg, #fef3c7, #fff)', padding: '1rem', borderBottom: '1px solid #f3f4f6' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sun size={20} color="#d97706" />
-                <h3 style={{ fontWeight: 700, margin: 0 }}>Morning Routine</h3>
-                <span style={{ background: '#fef3c7', color: '#d97706', fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '999px' }}>AM</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+          {[
+            { key: 'amRoutine', label: 'Morning Routine', tag: 'AM', icon: Sun, tagColor: '#d97706', tagBg: '#fef3c7', headerBg: '#fffbeb' },
+            { key: 'pmRoutine', label: 'Evening Routine', tag: 'PM', icon: Moon, tagColor: '#6366f1', tagBg: '#e0e7ff', headerBg: '#eef2ff' },
+          ].map(({ key, label, tag, icon: Icon, tagColor, tagBg, headerBg }) => (
+            <div key={key} style={{ background: '#fff', borderRadius: 14, border: '1px solid #f0f0f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: headerBg, padding: '14px 18px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Icon size={18} color={tagColor} />
+                <span style={{ fontWeight: 700, fontSize: 14 }}>{label}</span>
+                <span style={{ background: tagBg, color: tagColor, fontSize: 10, padding: '2px 7px', borderRadius: 999, fontWeight: 700 }}>{tag}</span>
               </div>
-            </div>
-            <div style={{ padding: '1rem' }}>
-              {routine.amRoutine?.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem' }}>
-                  <p style={{ color: '#9ca3af', marginBottom: '0.5rem' }}>No products in your AM routine</p>
-                  <Link to="/quiz" style={{ color: '#7B2D3C', fontSize: '0.85rem' }}>Take the quiz →</Link>
-                </div>
-              ) : (
-                routine.amRoutine.map((product, idx) => (
-                  <div key={product._id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.75rem', marginBottom: '0.5rem' }}>
-                    <div style={{ width: 28, height: 28, background: '#7B2D3C', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '0.75rem' }}>
+              <div style={{ padding: '14px 18px' }}>
+                {!routine[key]?.length ? (
+                  <div style={{ textAlign: 'center', padding: '30px 0' }}>
+                    <Sparkles size={28} color="#e5e7eb" style={{ margin: '0 auto 10px', display: 'block' }} />
+                    <p style={{ color: '#9ca3af', fontSize: 13, marginBottom: 10 }}>No products in your {tag} routine yet</p>
+                    <Link to="/quiz" style={{ color: M, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                      Take the skin quiz <ArrowRight size={12} />
+                    </Link>
+                  </div>
+                ) : routine[key].map((product, idx) => (
+                  <div key={product._id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px', background: '#f9fafb', borderRadius: 10, marginBottom: 8 }}>
+                    <div style={{ width: 26, height: 26, background: M, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 11, flexShrink: 0 }}>
                       {idx + 1}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{product.name}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>{product.description?.substring(0, 50)}...</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2 }}>{product.name}</div>
+                      <div style={{ fontSize: 10, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {product.description?.substring(0, 55)}...
+                      </div>
                     </div>
-                    <Link to={`/product/${product._id}`} style={{ fontSize: '0.7rem', color: '#7B2D3C' }}>View</Link>
+                    <Link to={`/product/${product._id}`} style={{ fontSize: 11, color: M, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>View</Link>
                   </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* PM Routine */}
-          <div style={{ background: '#fff', borderRadius: '1rem', border: '1px solid #f3f4f6', overflow: 'hidden' }}>
-            <div style={{ background: 'linear-gradient(135deg, #e0e7ff, #fff)', padding: '1rem', borderBottom: '1px solid #f3f4f6' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Moon size={20} color="#6366f1" />
-                <h3 style={{ fontWeight: 700, margin: 0 }}>Evening Routine</h3>
-                <span style={{ background: '#e0e7ff', color: '#6366f1', fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '999px' }}>PM</span>
+                ))}
               </div>
             </div>
-            <div style={{ padding: '1rem' }}>
-              {routine.pmRoutine?.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem' }}>
-                  <p style={{ color: '#9ca3af', marginBottom: '0.5rem' }}>No products in your PM routine</p>
-                  <Link to="/quiz" style={{ color: '#7B2D3C', fontSize: '0.85rem' }}>Take the quiz →</Link>
-                </div>
-              ) : (
-                routine.pmRoutine.map((product, idx) => (
-                  <div key={product._id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.75rem', marginBottom: '0.5rem' }}>
-                    <div style={{ width: 28, height: 28, background: '#7B2D3C', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '0.75rem' }}>
-                      {idx + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{product.name}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>{product.description?.substring(0, 50)}...</div>
-                    </div>
-                    <Link to={`/product/${product._id}`} style={{ fontSize: '0.7rem', color: '#7B2D3C' }}>View</Link>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          ))}
         </div>
       )}
 
-      {/* Orders Tab */}
+      {/* ── ORDERS ── */}
       {tab === 'orders' && (
         <div>
           {orders.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>
-              <Package size={48} color="#d1d5db" />
-              <p style={{ marginTop: '0.75rem', marginBottom: '1.25rem' }}>No orders yet</p>
-              <Link to="/products" style={{ background: '#7B2D3C', color: '#fff', padding: '0.6rem 1.5rem', borderRadius: '9999px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}>
+            <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: 14, border: '1px solid #f0f0f0' }}>
+              <Package size={40} color="#e5e7eb" style={{ margin: '0 auto 12px', display: 'block' }} />
+              <p style={{ color: '#9ca3af', marginBottom: 16, fontSize: 14 }}>No orders yet</p>
+              <Link to="/products" style={{ background: M, color: '#fff', padding: '8px 20px', borderRadius: 9, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
                 Start Shopping
               </Link>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {orders.map(order => {
-                const statusStyle = STATUS_STYLE[order.status] || STATUS_STYLE.pending;
+                const s = ORDER_STATUS[order.status] || ORDER_STATUS.pending;
                 return (
-                  <div key={order._id} style={{ background: '#fff', border: '1px solid #f3f4f6', borderRadius: '1rem', padding: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <div>
-                        <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>#{order.orderNumber || order._id.slice(-8).toUpperCase()}</span>
-                        <span style={{ fontSize: '0.7rem', color: '#9ca3af', marginLeft: '0.5rem' }}>
-                          <Calendar size={12} style={{ display: 'inline', marginRight: '0.2rem' }} />
-                          {new Date(order.orderDate || order.createdAt).toLocaleDateString('en-IN')}
+                  <div key={order._id} style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13 }}>#{order.orderNumber || order._id.slice(-8).toUpperCase()}</span>
+                        <span style={{ fontSize: 10, color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <Calendar size={10} /> {new Date(order.orderDate || order.createdAt).toLocaleDateString('en-IN')}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ background: statusStyle.bg, color: statusStyle.color, fontSize: '0.7rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '999px' }}>
-                          {order.status?.toUpperCase() || 'PENDING'}
-                        </span>
-                        <span style={{ fontWeight: 800, color: '#7B2D3C' }}>₹{(order.grandTotal || order.totalAmount || 0).toFixed(2)}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ background: s.bg, color: s.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999 }}>{s.label.toUpperCase()}</span>
+                        <span style={{ fontWeight: 800, color: M, fontSize: 14 }}>₹{(order.grandTotal || order.totalAmount || 0).toLocaleString('en-IN')}</span>
                       </div>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    <div style={{ fontSize: 12, color: '#6b7280' }}>
                       {order.items?.map(i => i.name).join(', ') || '—'}
                     </div>
                   </div>
@@ -508,35 +389,32 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Rewards Tab */}
+      {/* ── REWARDS ── */}
       {tab === 'rewards' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
           {[
-            { points: 0, label: 'Welcome Bonus', description: 'Signed up', icon: Gift, earned: true },
-            { points: 100, label: '₹10 off next order', description: '100 pts needed', icon: Ticket, earned: points >= 100 },
-            { points: 250, label: 'Free delivery', description: '250 pts needed', icon: Box, earned: points >= 250 },
-            { points: 500, label: '₹50 off any order', description: '500 pts needed', icon: Star, earned: points >= 500 },
-            { points: 1000, label: '₹150 off + free gift', description: '1000 pts needed', icon: Gift, earned: points >= 1000 },
-          ].map(reward => (
-            <RewardCard key={reward.points} {...reward} currentPoints={points} />
-          ))}
+            { points: 0,    label: 'Welcome Bonus',      description: 'Account created',        icon: Gift },
+            { points: 100,  label: '₹10 off next order', description: '100 pts required',       icon: Ticket },
+            { points: 250,  label: 'Free delivery',      description: '250 pts required',       icon: Box },
+            { points: 500,  label: '₹50 off any order',  description: '500 pts required',       icon: Star },
+            { points: 1000, label: '₹150 off + gift',    description: '1000 pts required',      icon: Trophy },
+            { points: 2000, label: 'Platinum status',    description: 'Exclusive perks forever', icon: Shield },
+          ].map(r => <RewardCard key={r.points} {...r} currentPoints={points} />)}
         </div>
       )}
 
-      {/* Vouchers Tab */}
+      {/* ── VOUCHERS ── */}
       {tab === 'vouchers' && (
         <div>
           {activeVouchers.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>
-              <Ticket size={48} color="#d1d5db" />
-              <p style={{ marginTop: '0.75rem' }}>No active vouchers.</p>
-              <p style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}>New users get a 15% welcome voucher on signup!</p>
+            <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: 14, border: '1px solid #f0f0f0', color: '#9ca3af' }}>
+              <Ticket size={36} color="#e5e7eb" style={{ margin: '0 auto 12px', display: 'block' }} />
+              <p style={{ fontSize: 14, marginBottom: 6 }}>No active vouchers</p>
+              <p style={{ fontSize: 12 }}>New users receive a 15% welcome voucher on signup.</p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-              {activeVouchers.map((voucher, idx) => (
-                <VoucherCard key={idx} voucher={voucher} />
-              ))}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+              {activeVouchers.map((v, i) => <VoucherCard key={i} voucher={v} />)}
             </div>
           )}
         </div>

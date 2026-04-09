@@ -32,7 +32,7 @@ import Returns from './pages/Returns';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
-
+import BIHub from './pages/admin/BIHub';
 function App() {
   return (
     <Router>
@@ -79,6 +79,7 @@ function App() {
                       <Route path="/privacy" element={<Privacy />} />
                       <Route path="/terms" element={<Terms />} />
                       <Route path="/returns" element={<Returns />} />
+                      <Route path="/admin/bidashboard" element={<BIHub />} />
                     </Routes>
                   </main>
                   <Footer />

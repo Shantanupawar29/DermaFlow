@@ -19,13 +19,6 @@ const Checkout = () => {
     phone: ''
   });
 
-  // REMOVE THIS useEffect - it's causing the redirect to empty cart
-  // useEffect(() => {
-  //   if (cartItems.length === 0) {
-  //     navigate('/cart');
-  //   }
-  // }, [cartItems, navigate]);
-
   const validCoupons = {
     'WELCOME15': { type: 'percentage', value: 15, minOrder: 500 },
     'DERMA20': { type: 'percentage', value: 20, minOrder: 1000 },
@@ -65,10 +58,18 @@ const Checkout = () => {
     setTimeout(() => setCouponMessage(''), 3000);
   };
 
+  // IMPORTANT: totalPrice from CartContext is already in rupees
+  // Because cartItems store price in paise, but totalPrice converts to rupees
   const taxAmount = totalPrice * 0.18;
   const shippingAmount = totalPrice > 1000 ? 0 : 50;
   const discountedTotal = totalPrice - discount;
   const grandTotal = discountedTotal + taxAmount + shippingAmount;
+
+  console.log('Price breakdown (in rupees):');
+  console.log('Total Price:', totalPrice);
+  console.log('Discount:', discount);
+  console.log('Tax:', taxAmount);
+  console.log('Grand Total:', grandTotal);
 
   const loadRazorpayScript = () => new Promise((resolve) => {
     if (window.Razorpay) return resolve(true);
@@ -92,12 +93,11 @@ const Checkout = () => {
       
       const orderId = response.data._id;
       
-      // Clear cart - this will trigger cart update but we don't want redirect
       clearCart();
       console.log('Cart cleared');
       
-      // Direct navigation - use window.location to bypass React Router's state
-      window.location.href = `/order-confirmation/${orderId}`;
+      // Navigate to order confirmation
+      navigate(`/order-confirmation/${orderId}`);
       
       return true;
     } catch (error) {
@@ -115,12 +115,15 @@ const Checkout = () => {
         setLoading(false);
         return;
       }
-const amountInPaise = Math.round(grandTotal * 100);
-    console.log('💰 Sending amount to backend (paise):', amountInPaise);
-    console.log('💰 Original amount (rupees):', grandTotal);
+      
+      // Convert rupees to paise for Razorpay (multiply by 100)
+      const amountInPaise = Math.round(grandTotal * 100);
+      console.log('💰 Sending amount to backend (paise):', amountInPaise);
+      console.log('💰 Original amount (rupees):', grandTotal);
+      
       const { data: razorpayOrder } = await axios.post(
         'http://localhost:5000/api/payment/create-order',
-        { amount: grandTotal },
+        { amount: amountInPaise }, // Send in paise
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
 
@@ -161,13 +164,13 @@ const amountInPaise = Math.round(grandTotal * 100);
                   product: item.id || item._id,
                   quantity: item.quantity,
                   name: item.name,
-                  price: item.price,
+                  price: item.price, // Price in paise from cart
                 })),
                 shippingAddress: formData.address,
                 paymentMethod: 'razorpay',
                 phone: formData.phone,
-                totalAmount: grandTotal,
-                discountAmount: discount,
+                totalAmount: Math.round(grandTotal * 100), // Store in paise
+                discountAmount: Math.round(discount * 100),
                 couponCode: couponApplied ? couponCode : null,
               };
               
@@ -221,13 +224,13 @@ const amountInPaise = Math.round(grandTotal * 100);
         product: item.id,
         quantity: item.quantity,
         name: item.name,
-        price: item.price
+        price: item.price, // Price in paise
       })),
       shippingAddress: formData.address,
       paymentMethod: 'cod',
       phone: formData.phone,
-      totalAmount: grandTotal,
-      discountAmount: discount,
+      totalAmount: Math.round(grandTotal * 100), // Store in paise
+      discountAmount: Math.round(discount * 100),
       couponCode: couponApplied ? couponCode : null
     };
 
@@ -336,7 +339,7 @@ const amountInPaise = Math.round(grandTotal * 100);
               {cartItems.map((item, index) => (
                 <div key={item.id || index} className="flex justify-between text-sm">
                   <span>{item.name} x {item.quantity}</span>
-                  <span>₹{(item.price * item.quantity).toFixed(2)}</span>
+                  <span>₹{((item.price * item.quantity) / 100).toFixed(2)}</span>
                 </div>
               ))}
             </div>

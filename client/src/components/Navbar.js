@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Navbar = () => {
-  const { totalItems: cartTotal } = useCart();
+const { cartCount: cartTotal } = useCart();
   const { isAuthenticated, user, logout, glowPoints } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

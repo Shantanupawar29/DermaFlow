@@ -1,15 +1,18 @@
-// Convert price from paise to rupees for display
-export const formatPrice = (priceInPaise) => {
-  if (!priceInPaise && priceInPaise !== 0) return '₹0';
-  return `₹${(priceInPaise / 100).toFixed(2)}`;
+// utils/price.js - CORRECTED VERSION
+export const formatPrice = (price) => {
+  if (!price && price !== 0) return '₹0.00';
+  
+  // DON'T divide by 100 - price is already in rupees
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(price);
 };
 
-// Get raw rupees value (not formatted)
-export const getRupees = (priceInPaise) => {
-  return priceInPaise / 100;
-};
-
-// Convert rupees to paise for backend
-export const toPaise = (rupees) => {
-  return Math.round(rupees * 100);
+// Simple version if you prefer
+export const simpleFormatPrice = (price) => {
+  if (!price && price !== 0) return '₹0.00';
+  return `₹${price.toFixed(2)}`;
 };

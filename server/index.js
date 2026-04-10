@@ -36,9 +36,12 @@ const scmRoutes        = require('./routes/scm');
 const sellerAuthRoutes = require('./routes/sellerAuth');
 const reviewRoutes     = require('./routes/reviews'); // New Feature
 const quizRoutes = require('./routes/quiz');
+const pincodeRoutes = require('./routes/pincode');
+
 
 // ✅ ROUTES REGISTRATION
 app.use('/api/quiz', quizRoutes);
+app.use('/api/pincode', pincodeRoutes);
 app.use('/api/reviews',   reviewRoutes);    // Customer Reviews & Feedback
 app.use('/api/admin',     adminRoutes);     // Security SOC, Audit Logs, Sentiment
 app.use('/api/scm',       scmRoutes);       // Supply Chain Management

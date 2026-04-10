@@ -43,6 +43,7 @@ const Products = () => {
       if (filters.search) params.append('search', filters.search);
       
       const response = await axios.get(`http://localhost:5000/api/products?${params}`);
+      console.log("Fetched products:", response.data.products);
       setProducts(response.data.products);
     } catch (error) {
       console.error('Error fetching products:', error);

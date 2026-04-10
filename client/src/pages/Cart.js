@@ -1,7 +1,9 @@
+// Cart.js - Add conflict warnings at the top
 import React, { useEffect, useState } from 'react';
 import { useCart } from '../context/CartContext';
+import { getConflicts } from '../utils/skincareConflicts';
 import { Link } from 'react-router-dom';
-import { Trash2, ShoppingBag, ArrowLeft, CreditCard, Minus, Plus, X } from 'lucide-react';
+import { Trash2, ShoppingBag, ArrowLeft, CreditCard, Minus, Plus, X, AlertTriangle } from 'lucide-react';
 
 const R = '#7B2D3C';
 
@@ -15,7 +17,27 @@ export default function Cart() {
     cartCount 
   } = useCart();
   
+  const [conflicts, setConflicts] = useState([]);
+  const [showConflicts, setShowConflicts] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Check for conflicts whenever cart items change
+  useEffect(() => {
+    if (cartItems && cartItems.length > 0) {
+      // Get product details for conflict checking
+      const productsForConflictCheck = cartItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        ingredients: item.ingredients || [], // Make sure your product has ingredients
+        category: item.category
+      }));
+      
+      const conflictWarnings = getConflicts(productsForConflictCheck);
+      setConflicts(conflictWarnings);
+    } else {
+      setConflicts([]);
+    }
+  }, [cartItems]);
 
   // Handle quantity update
   const handleUpdateQuantity = async (productId, newQuantity) => {
@@ -94,6 +116,61 @@ export default function Cart() {
             <Trash2 size={14} /> Clear Cart
           </button>
         </div>
+
+        {/* CONFLICT WARNINGS - Add this section */}
+        {conflicts.length > 0 && showConflicts && (
+          <div style={{ 
+            background: '#fef2f2', 
+            borderLeft: '4px solid #dc2626', 
+            borderRadius: '0.75rem', 
+            padding: '1rem 1.25rem', 
+            marginBottom: '1.5rem',
+            border: '1px solid #fecaca'
+          }}>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+              <AlertTriangle size={20} color="#dc2626" style={{ marginTop: '2px' }} />
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontWeight: 700, color: '#991b1b', margin: '0 0 0.5rem', fontSize: '0.95rem' }}>
+                  Skincare Compatibility Warning
+                </h3>
+                {conflicts.map((conflict, index) => (
+                  <div key={index} style={{ marginBottom: index < conflicts.length - 1 ? '0.75rem' : 0 }}>
+                    <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: '#7f1d1d', lineHeight: 1.4 }}>
+                      {conflict.message}
+                    </p>
+                    {conflict.severity === 'high' && (
+                      <span style={{
+                        display: 'inline-block',
+                        marginTop: '0.25rem',
+                        fontSize: '0.7rem',
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '999px',
+                        background: '#fee2e2',
+                        color: '#dc2626',
+                        fontWeight: 600
+                      }}>
+                        High Severity
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button 
+                onClick={() => setShowConflicts(false)} 
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  color: '#991b1b', 
+                  padding: '0.2rem',
+                  marginTop: '-4px'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 360px', gap: '1.5rem', alignItems: 'start' }}>
 

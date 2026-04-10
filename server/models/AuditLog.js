@@ -32,6 +32,9 @@ const auditLogSchema = new mongoose.Schema({
       'QUARANTINE_BATCH',
       'RECALL_BATCH',
       'DELETE_PRODUCT',
+      'QUALITY_CHECK',
+      'CREATE_PRODUCT',
+      'UPDATE_PRODUCT',
 
       // Orders
       'UPDATE_ORDER_STATUS',
@@ -52,6 +55,7 @@ const auditLogSchema = new mongoose.Schema({
       'EXPORT_DATA',
       'BULK_ACTION',
       'CONFIG_CHANGE',
+
     ],
     required: true,
   },

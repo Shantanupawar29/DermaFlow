@@ -25,7 +25,39 @@ const Checkout = () => {
     'GLOW10': { type: 'percentage', value: 10, minOrder: 300 },
     'FREESHIP': { type: 'freeshipping', value: 0, minOrder: 999 }
   };
+const fetchAddressFromPincode = async (pincode) => {
+  // Only trigger when EXACTLY 6 digits
+  if (!/^\d{6}$/.test(pincode)) return;
 
+  try {
+    console.log("Fetching address for:", pincode);
+
+    const res = await axios.get(`http://localhost:5000/api/pincode/${pincode}`);
+
+    const data = res.data[0];
+
+    if (data.Status === "Success" && data.PostOffice?.length > 0) {
+      const postOffice = data.PostOffice[0];
+
+      console.log("API Response:", postOffice);
+
+      setFormData((prev) => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          city: postOffice.District || "",
+          state: postOffice.State || "",
+          street: postOffice.Name || prev.address.street,
+          country: "India"
+        }
+      }));
+    } else {
+      console.log("Invalid pincode");
+    }
+  } catch (error) {
+    console.error("Pincode fetch error:", error);
+  }
+};
   const applyCoupon = () => {
     const code = couponCode.toUpperCase();
     const coupon = validCoupons[code];
@@ -265,18 +297,55 @@ const Checkout = () => {
                   value={formData.address.street} onChange={(e) => setFormData({
                     ...formData, address: { ...formData.address, street: e.target.value }
                   })} />
-                <input type="text" placeholder="City" required className="border p-2 rounded"
-                  value={formData.address.city} onChange={(e) => setFormData({
-                    ...formData, address: { ...formData.address, city: e.target.value }
-                  })} />
-                <input type="text" placeholder="State" required className="border p-2 rounded"
-                  value={formData.address.state} onChange={(e) => setFormData({
-                    ...formData, address: { ...formData.address, state: e.target.value }
-                  })} />
-                <input type="text" placeholder="ZIP Code" required className="border p-2 rounded"
-                  value={formData.address.zipCode} onChange={(e) => setFormData({
-                    ...formData, address: { ...formData.address, zipCode: e.target.value }
-                  })} />
+                <input
+  type="text"
+  placeholder="City"
+  required
+  className="border p-2 rounded bg-gray-100"
+  value={formData.address.city}
+  readOnly
+/>
+<select
+  required
+  className="border p-2 rounded"
+  value={formData.address.state}
+  onChange={(e) => setFormData((prev) => ({
+    ...prev,
+    address: { ...prev.address, state: e.target.value }
+  }))}
+>
+  <option value="">Select State</option>
+  {[
+    "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa",
+    "Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala",
+    "Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland",
+    "Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana",
+    "Tripura","Uttar Pradesh","Uttarakhand","West Bengal",
+    "Delhi","Jammu and Kashmir","Ladakh","Puducherry"
+  ].map((state) => (
+    <option key={state} value={state}>{state}</option>
+  ))}
+</select>
+<input
+  type="text"
+  placeholder="Pincode"
+  required
+  maxLength={6}
+  className="border p-2 rounded"
+  value={formData.address.zipCode}
+  onChange={(e) => {
+    const pincode = e.target.value.replace(/\D/g, ""); // allow only numbers
+
+    setFormData((prev) => ({
+      ...prev,
+      address: { ...prev.address, zipCode: pincode }
+    }));
+
+    if (pincode.length === 6) {
+      fetchAddressFromPincode(pincode);
+    }
+  }}
+/>
                 <input type="tel" placeholder="Phone Number" required className="border p-2 rounded"
                   value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
               </div>
@@ -339,7 +408,7 @@ const Checkout = () => {
               {cartItems.map((item, index) => (
                 <div key={item.id || index} className="flex justify-between text-sm">
                   <span>{item.name} x {item.quantity}</span>
-                  <span>₹{((item.price * item.quantity) / 100).toFixed(2)}</span>
+                  <span>₹{((item.price * item.quantity) ).toFixed(2)}</span>
                 </div>
               ))}
             </div>

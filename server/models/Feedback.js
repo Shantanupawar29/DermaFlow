@@ -62,7 +62,7 @@ const CRITICAL_TOPICS   = {
   customer_service: ['support','response','rude','ignored','help','agent','call'],
 };
 
-feedbackSchema.pre('save', function (next) {
+feedbackSchema.pre('save', function () {
   const text = ((this.subject || '') + ' ' + this.message).toLowerCase();
   const words = text.split(/\s+/);
 
@@ -102,7 +102,7 @@ feedbackSchema.pre('save', function (next) {
     this.flagReason = `Low rating: ${this.rating}/5`;
   }
 
-  next();
+  
 });
 
 module.exports = mongoose.model('Feedback', feedbackSchema);

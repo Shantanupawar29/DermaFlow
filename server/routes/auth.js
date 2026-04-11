@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const AuditLog = require('../models/AuditLog');
 const aiService = require('../services/aiService');
 const { protect } = require('../middleware/auth');
-
+const Order = require('../models/Order');
 const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
 let sendWelcomeEmail = null;
@@ -92,7 +92,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Use the comparePassword method
-    const isMatch = await user.comparePasswordAsync(password);
+   const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
@@ -107,6 +107,9 @@ router.post('/login', async (req, res) => {
     res.json({ token, ...userResponse });
   } catch (err) {
     console.error('Login error:', err.message);
+      console.error('🔥 FULL ERROR:', err);
+  console.error(err.stack);   // 👈 ADD THIS
+  res.status(500).json({ message: err.message });
     res.status(500).json({ message: err.message });
   }
 });
@@ -194,5 +197,138 @@ router.post('/apply-voucher', protect, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+// Add these to your existing auth.js file
 
+// Get user stats (alternative endpoint)
+router.get('/stats', protect, async (req, res) => {
+  try {
+    const orders = await Order.find({ user: req.user._id });
+    const user = await User.findById(req.user._id);
+    
+    const stats = {
+      totalOrders: orders.length,
+      totalSpent: orders.reduce((sum, o) => sum + (o.grandTotal || 0), 0),
+      glowPoints: user.glowPoints || 0,
+      loyaltyTier: user.loyaltyTier,
+      recycledBottles: user.recycledBottles || 0
+    };
+    
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get user addresses
+router.get('/addresses', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    res.json(user.addresses || []);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get user wishlist
+router.get('/wishlist', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate('wishlist');
+    res.json(user.wishlist || []);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get pending reviews
+router.get('/pending-reviews', protect, async (req, res) => {
+  try {
+    const Review = require('../models/Review');
+    const orders = await Order.find({ 
+      user: req.user._id, 
+      status: 'delivered' 
+    }).populate('items.product');
+    
+    const existingReviews = await Review.find({ user: req.user._id });
+    const reviewedProductIds = existingReviews.map(r => r.product.toString());
+    
+    const pending = [];
+    
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        if (item.product && !reviewedProductIds.includes(item.product._id.toString())) {
+          pending.push({
+            productId: item.product._id,
+            productName: item.product.name,
+            orderId: order._id,
+            orderDate: order.orderDate
+          });
+        }
+      });
+    });
+    
+    res.json(pending);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Submit a review
+router.post('/reviews', protect, async (req, res) => {
+  try {
+    const Review = require('../models/Review');
+    const { productId, orderId, rating, title, comment } = req.body;
+    
+    // Check if user has purchased this product
+    const order = await Order.findOne({ 
+      _id: orderId, 
+      user: req.user._id,
+      'items.product': productId
+    });
+    
+    if (!order) {
+      return res.status(403).json({ message: 'You can only review products you have purchased' });
+    }
+    
+    // Check if already reviewed
+    const existingReview = await Review.findOne({ 
+      product: productId, 
+      user: req.user._id,
+      order: orderId
+    });
+    
+    if (existingReview) {
+      return res.status(400).json({ message: 'You have already reviewed this product' });
+    }
+    
+    const review = await Review.create({
+      user: req.user._id,
+      product: productId,
+      order: orderId,
+      rating,
+      title,
+      comment,
+      name: req.user.name,
+      email: req.user.email
+    });
+    
+    // Update product rating
+    const Product = require('../models/Product');
+    const product = await Product.findById(productId);
+    const allReviews = await Review.find({ product: productId, isApproved: true });
+    const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+    
+    product.rating = avgRating;
+    product.numReviews = allReviews.length;
+    await product.save();
+    
+    // Add glow points for review
+    const user = await User.findById(req.user._id);
+    user.glowPoints = (user.glowPoints || 0) + 25;
+    await user.save();
+    
+    res.status(201).json({ message: 'Review submitted! +25 GlowPoints', review });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 module.exports = router;

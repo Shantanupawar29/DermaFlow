@@ -8,34 +8,66 @@ const voucherSchema = new mongoose.Schema({
   expiresAt: Date,
 }, { _id: false });
 
+const addressSchema = new mongoose.Schema({
+  type: { type: String, enum: ['shipping', 'billing', 'both'], default: 'both' },
+  name: { type: String, required: true },
+  street: { type: String, required: true },
+  city: { type: String, required: true },
+  state: { type: String, required: true },
+  zipCode: { type: String, required: true },
+  country: { type: String, default: 'India' },
+  phone: { type: String, required: true },
+  landmark: String,
+  isDefault: { type: Boolean, default: false }
+}, { _id: true });
+
+const savedCardSchema = new mongoose.Schema({
+  last4: { type: String, required: true },
+  cardType: { type: String, enum: ['Visa', 'Mastercard', 'RuPay', 'Amex'], required: true },
+  expiryMonth: { type: Number, required: true },
+  expiryYear: { type: Number, required: true },
+  isDefault: { type: Boolean, default: false }
+}, { _id: true });
+
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+
   role: {
     type: String,
     enum: ['user', 'admin', 'customer'],
     default: 'user'
   },
-  address: {
-    street: String, city: String, state: String,
-    zipCode: String, country: String
-  },
-  addresses: [{ type: Object, default: [] }],
+
   phone: String,
-  
-  skinType: { 
-    type: String, 
-    enum: ['oily', 'dry', 'combination', 'normal', 'sensitive'], 
-    default: null 
+  dateOfBirth: Date,
+  gender: { type: String, enum: ['male', 'female', 'other', 'prefer_not_to_say'] },
+  profilePicture: String,
+
+  addresses: [addressSchema],
+  savedCards: [savedCardSchema],
+
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+
+  preferences: {
+    newsletter: { type: Boolean, default: false },
+    smsUpdates: { type: Boolean, default: false },
+    language: { type: String, default: 'en' },
+    currency: { type: String, default: 'INR' }
+  },
+
+  // Skin Profile
+  skinType: {
+    type: String,
+    enum: ['oily', 'dry', 'combination', 'normal', 'sensitive'],
+    default: null
   },
   skinConcerns: [String],
   hairConcerns: [String],
   allergies: [String],
   quizCompleted: { type: Boolean, default: false },
-  amRoutine: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
-  pmRoutine: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
-  
+
   skinProfile: {
     skinType: { type: String, enum: ['oily', 'dry', 'combination', 'normal', 'sensitive'], default: null },
     concerns: [String],
@@ -45,6 +77,7 @@ const userSchema = new mongoose.Schema({
     }
   },
 
+  // Loyalty
   glowPoints: { type: Number, default: 0 },
   recycledBottles: { type: Number, default: 0 },
   totalSpent: { type: Number, default: 0 },
@@ -55,26 +88,13 @@ const userSchema = new mongoose.Schema({
 
   lastLogin: Date,
   isActive: { type: Boolean, default: true },
+
 }, { timestamps: true });
 
-// SIMPLE PRE-SAVE HOOK - No async/await, just callbacks
-// userSchema.pre('save', function(next) {
-//   const user = this;
-  
-//   if (!user.isModified('password')) {
-//     return next();
-//   }
-  
-//   bcrypt.genSalt(10, (err, salt) => {
-//     if (err) return next(err);
-    
-//     bcrypt.hash(user.password, salt, (err, hash) => {
-//       if (err) return next(err);
-//       user.password = hash;
-//       next();
-//     });
-//   });
-// });
+
+// ✅ FIXED PASSWORD HASHING
+// In User.js - REPLACE the existing pre-save middleware with this:
+// ✅ COMPLETELY REWRITTEN pre-save middleware
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
 
@@ -82,37 +102,35 @@ userSchema.pre('save', async function () {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// SIMPLE COMPARE METHOD - Using callback
-userSchema.methods.comparePassword = function(candidatePassword, callback) {
-  bcrypt.compare(candidatePassword, this.password, (err, isMatch) => {
-    if (err) return callback(err);
-    callback(null, isMatch);
-  });
+
+// ✅ FIXED METHOD (MATCHES YOUR LOGIN CODE)
+userSchema.methods.comparePassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Add promise wrapper for async/await support
-userSchema.methods.comparePasswordAsync = function(candidatePassword) {
-  return new Promise((resolve, reject) => {
-    bcrypt.compare(candidatePassword, this.password, (err, isMatch) => {
-      if (err) reject(err);
-      else resolve(isMatch);
-    });
-  });
-};
 
-userSchema.methods.updateLoyaltyTier = function() {
-  const spent = this.totalSpent / 100;
+// OPTIONAL CLEAN VERSION (you can use this instead in future)
+// userSchema.methods.comparePassword = async function (enteredPassword) {
+//   return await bcrypt.compare(enteredPassword, this.password);
+// };
+
+
+// Loyalty logic
+userSchema.methods.updateLoyaltyTier = function () {
+  const spent = this.totalSpent;
   if (spent >= 50000) this.loyaltyTier = 'platinum';
   else if (spent >= 20000) this.loyaltyTier = 'gold';
   else if (spent >= 5000) this.loyaltyTier = 'silver';
   else this.loyaltyTier = 'bronze';
 };
 
+
+// Remove password in response
 userSchema.set('toJSON', {
-  transform: function(doc, ret) {
+  transform: function (doc, ret) {
     delete ret.password;
     return ret;
   }
 });
 
-module.exports = mongoose.models.User || mongoose.model('User', userSchema);
+module.exports = mongoose.model('User', userSchema);

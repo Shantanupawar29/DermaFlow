@@ -1,424 +1,850 @@
-// client/src/pages/Dashboard.js
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import {
-  Sun, Moon, Sparkles, Recycle, Gift, Star, Trophy,
-  ShoppingBag, Package, Wallet, Box, Ticket,
-  LogOut, Check, ChevronRight, Award, Calendar,
-  Heart, Shield, ArrowRight, Clock, Zap, Copy
+import { useCart } from '../context/CartContext';
+import { 
+  User, ShoppingBag, Heart, MapPin, Settings, Star, 
+  Package, Truck, CheckCircle, Clock, AlertCircle,
+  Plus, Edit2, Trash2, LogOut, Sparkles, Gift,
+  ChevronRight, Calendar, Award, Copy, X, Home,
+  Phone, Mail, Map, RefreshCw, TrendingUp
 } from 'lucide-react';
 import axios from 'axios';
+import { Briefcase } from 'lucide-react';
+import LocationDetector from '../components/LocationDetector';
 
 const API_URL = 'http://localhost:5000/api';
-const M = '#4A0E2E';
+const token = () => localStorage.getItem('token');
 
-const TIER = {
-  bronze:   { color: '#d97706', bg: '#fef3c7', bar: '#f59e0b', label: 'Bronze', min: 0,    max: 500 },
-  silver:   { color: '#64748b', bg: '#f1f5f9', bar: '#94a3b8', label: 'Silver', min: 500,  max: 1000 },
-  gold:     { color: '#b45309', bg: '#fefce8', bar: '#eab308', label: 'Gold',   min: 1000, max: 2000 },
-  platinum: { color: '#7c3aed', bg: '#ede9fe', bar: '#8b5cf6', label: 'Platinum', min: 2000, max: 2000 },
-};
-
+// Status config
 const ORDER_STATUS = {
-  pending:    { bg: '#fefce8', color: '#d97706', label: 'Pending' },
-  processing: { bg: '#eff6ff', color: '#1d4ed8', label: 'Processing' },
-  confirmed:  { bg: '#f0fdf4', color: '#16a34a', label: 'Confirmed' },
-  shipped:    { bg: '#f0fdfa', color: '#0d9488', label: 'Shipped' },
-  delivered:  { bg: '#dcfce7', color: '#15803d', label: 'Delivered' },
-  cancelled:  { bg: '#fef2f2', color: '#dc2626', label: 'Cancelled' },
+  pending: { label: 'Pending', icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+  confirmed: { label: 'Confirmed', icon: CheckCircle, color: 'text-blue-600', bg: 'bg-blue-50' },
+  shipped: { label: 'Shipped', icon: Truck, color: 'text-purple-600', bg: 'bg-purple-50' },
+  delivered: { label: 'Delivered', icon: Package, color: 'text-green-600', bg: 'bg-green-50' },
+  cancelled: { label: 'Cancelled', icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50' }
 };
 
-function StatCard({ icon: Icon, label, value, color }) {
-  return (
-    <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '18px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', flex: 1, minWidth: 130 }}>
-      <div style={{ background: color ? `${color}15` : '#f3f4f6', borderRadius: 9, padding: 8, display: 'inline-flex', marginBottom: 10 }}>
-        <Icon size={16} color={color || '#6b7280'} />
-      </div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: color || '#1f2937', lineHeight: 1.1, marginBottom: 3 }}>{value}</div>
-      <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500 }}>{label}</div>
-    </div>
-  );
-}
-
-function Tab({ label, active, onClick, icon: Icon }) {
-  return (
-    <button onClick={onClick} style={{
-      display: 'flex', alignItems: 'center', gap: 5,
-      padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-      fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
-      background: active ? M : 'transparent',
-      color: active ? '#fff' : '#6b7280',
-    }}>
-      {Icon && <Icon size={13} />}{label}
-    </button>
-  );
-}
-
-function RewardCard({ points, label, description, icon: Icon, currentPoints }) {
-  const earned = currentPoints >= points;
-  const progress = Math.min((currentPoints / Math.max(points, 1)) * 100, 100);
-  return (
-    <div style={{
-      background: earned ? '#f0fdf4' : '#fff',
-      border: earned ? '1.5px solid #86efac' : '1px solid #f0f0f0',
-      borderRadius: 14, padding: '18px', position: 'relative',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
-    }}>
-      {earned && (
-        <div style={{ position: 'absolute', top: 10, right: 10, background: '#16a34a', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
-          <Check size={9} /> Earned
-        </div>
-      )}
-      <div style={{ color: earned ? '#16a34a' : M, marginBottom: 8 }}><Icon size={22} /></div>
-      <div style={{ fontWeight: 700, color: '#1f2937', marginBottom: 3, fontSize: 13 }}>{label}</div>
-      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: earned ? 0 : 10 }}>{description}</div>
-      {!earned && (
-        <>
-          <div style={{ background: '#e5e7eb', borderRadius: 999, height: 5, overflow: 'hidden', marginBottom: 4 }}>
-            <div style={{ height: 5, background: M, width: `${progress}%`, borderRadius: 999, transition: 'width 0.8s ease' }} />
-          </div>
-          <div style={{ fontSize: 10, color: '#9ca3af' }}>{currentPoints} / {points} pts</div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function VoucherCard({ voucher }) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard.writeText(voucher.code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  return (
-    <div style={{ background: `linear-gradient(135deg, ${M}, #7B2D3C)`, borderRadius: 16, padding: '20px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.06)', borderRadius: '50%' }} />
-      <Gift size={24} color="rgba(255,255,255,0.85)" style={{ marginBottom: 10 }} />
-      <div style={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1, marginBottom: 3 }}>{voucher.discount}% OFF</div>
-      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 14 }}>Min spend ₹999</div>
-      <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 14, letterSpacing: '0.1em' }}>{voucher.code}</span>
-        <button onClick={copy} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: 5, padding: '3px 8px', cursor: 'pointer', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
-          {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
-        </button>
-      </div>
-      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Expires: {new Date(voucher.expiresAt).toLocaleDateString('en-IN')}</div>
-    </div>
-  );
-}
+// Tier config
+const TIERS = {
+  bronze: { name: 'Bronze', min: 0, max: 4999, color: '#cd7f32', bg: '#fef3c7', icon: '🥉' },
+  silver: { name: 'Silver', min: 5000, max: 19999, color: '#94a3b8', bg: '#f1f5f9', icon: '🥈' },
+  gold: { name: 'Gold', min: 20000, max: 49999, color: '#d4af37', bg: '#fefce8', icon: '🥇' },
+  platinum: { name: 'Platinum', min: 50000, max: Infinity, color: '#7c3aed', bg: '#ede9fe', icon: '💎' }
+};
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout } = useAuth();
+  const [selectedOrder, setSelectedOrder] = useState(null);
+const [showOrderModal, setShowOrderModal] = useState(false);
+const [showReviewModal, setShowReviewModal] = useState(false);
+const [reviewProduct, setReviewProduct] = useState(null);
+const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', comment: '' });
+const [submittingReview, setSubmittingReview] = useState(false);
+  const { addToCart } = useCart();
+  const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState(null);
-  const [orders, setOrders]     = useState([]);
-  const [routine, setRoutine]   = useState({ amRoutine: [], pmRoutine: [] });
-  const [loading, setLoading]   = useState(true);
-  const [tab, setTab]           = useState('overview');
+  const [orders, setOrders] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
+  const [addresses, setAddresses] = useState([]);
+  const [stats, setStats] = useState({});
+  const [activeTab, setActiveTab] = useState('overview');
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
+  const [addressForm, setAddressForm] = useState({
+    name: '', street: '', city: '', state: '', zipCode: '', phone: '', label: 'Home', isDefault: false
+  });
 
   useEffect(() => {
-    if (user) { fetchData(); fetchRoutine(); }
+    if (user) fetchDashboardData();
   }, [user]);
 
-  const fetchData = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const h = { headers: { Authorization: `Bearer ${token}` } };
-      const [uRes, oRes] = await Promise.all([
-        axios.get(`${API_URL}/auth/me`, h),
-        axios.get(`${API_URL}/orders/my-orders`, h),
+      const [userRes, ordersRes, wishlistRes, addressesRes, statsRes] = await Promise.all([
+        axios.get(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${token()}` } }),
+        axios.get(`${API_URL}/orders/my-orders`, { headers: { Authorization: `Bearer ${token()}` } }),
+        axios.get(`${API_URL}/profile/wishlist`, { headers: { Authorization: `Bearer ${token()}` } }),
+        axios.get(`${API_URL}/profile/addresses`, { headers: { Authorization: `Bearer ${token()}` } }),
+        axios.get(`${API_URL}/profile/stats`, { headers: { Authorization: `Bearer ${token()}` } })
       ]);
-      setUserData(uRes.data);
-      setOrders(oRes.data);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+      
+      setUserData(userRes.data);
+      setOrders(ordersRes.data || []);
+      setWishlist(wishlistRes.data || []);
+      setAddresses(addressesRes.data || []);
+      setStats(statsRes.data);
+    } catch (error) {
+      console.error('Error fetching dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+const openOrderDetails = (order) => {
+  setSelectedOrder(order);
+  setShowOrderModal(true);
+};
+
+const openReviewModal = (item, orderId) => {
+  // Extract product details properly
+  const productDetails = {
+    _id: item.product?._id || item.product || item._id,
+    name: item.name,
+    price: item.price,
+    images: item.product?.images || item.images || [],
+    orderId: orderId
+  };
+  setReviewProduct(productDetails);
+  setShowReviewModal(true);
+};
+
+const submitReview = async () => {
+  if (!reviewForm.comment.trim()) {
+    alert('Please write a review');
+    return;
+  }
+  
+  setSubmittingReview(true);
+  try {
+    const token = localStorage.getItem('token');
+    await axios.post(`${API_URL}/reviews`, {
+      productId: reviewProduct._id,
+      orderId: reviewProduct.orderId,
+      rating: reviewForm.rating,
+      title: reviewForm.title,
+      comment: reviewForm.comment
+    }, { headers: { Authorization: `Bearer ${token}` } });
+    
+    alert('Review submitted! +25 GlowPoints added!');
+    setShowReviewModal(false);
+    setReviewForm({ rating: 5, title: '', comment: '' });
+    fetchDashboardData();
+  } catch (error) {
+    console.error('Error submitting review:', error);
+    alert(error.response?.data?.message || 'Failed to submit review');
+  } finally {
+    setSubmittingReview(false);
+  }
+};
+  const handleAddToCart = (product) => {
+    addToCart(product, 1);
+    alert(`${product.name} added to cart!`);
   };
 
-  const fetchRoutine = async () => {
+  const removeFromWishlist = async (productId) => {
     try {
-      const token = localStorage.getItem('token');
-      const r = await axios.get(`${API_URL}/quiz/routine`, { headers: { Authorization: `Bearer ${token}` } });
-      setRoutine(r.data);
-    } catch (e) { /* quiz not completed yet */ }
+      await axios.delete(`${API_URL}/profile/wishlist/${productId}`, {
+        headers: { Authorization: `Bearer ${token()}` }
+      });
+      setWishlist(prev => prev.filter(p => p._id !== productId));
+    } catch (error) {
+      console.error('Error removing from wishlist:', error);
+    }
+  };
+
+  const saveAddress = async () => {
+    try {
+      if (editingAddress) {
+        await axios.put(`${API_URL}/profile/addresses/${editingAddress._id}`, addressForm, {
+          headers: { Authorization: `Bearer ${token()}` }
+        });
+      } else {
+        await axios.post(`${API_URL}/profile/addresses`, addressForm, {
+          headers: { Authorization: `Bearer ${token()}` }
+        });
+      }
+      setShowAddressForm(false);
+      setEditingAddress(null);
+      setAddressForm({ name: '', street: '', city: '', state: '', zipCode: '', phone: '', label: 'Home', isDefault: false });
+      fetchDashboardData();
+    } catch (error) {
+      alert('Failed to save address');
+    }
+  };
+
+  const deleteAddress = async (addressId) => {
+    if (window.confirm('Delete this address?')) {
+      await axios.delete(`${API_URL}/profile/addresses/${addressId}`, {
+        headers: { Authorization: `Bearer ${token()}` }
+      });
+      fetchDashboardData();
+    }
   };
 
   if (!isAuthenticated || !user) return <Navigate to="/login" />;
+  if (loading) return <div className="flex justify-center items-center h-64">Loading your dashboard...</div>;
 
   const cu = userData || user;
+  const spent = stats.totalSpent || 0;
+  const currentTier = Object.values(TIERS).find(t => spent >= t.min && spent <= t.max) || TIERS.bronze;
+  const nextTier = Object.values(TIERS).find(t => t.min > spent);
+  const progressToNext = nextTier ? ((spent - currentTier.min) / (nextTier.min - currentTier.min)) * 100 : 100;
   const points = cu.glowPoints || 0;
-  const totalSpent = orders.reduce((s, o) => s + (o.grandTotal || o.totalAmount || 0), 0);
-
-  const tierKey = points >= 2000 ? 'platinum' : points >= 1000 ? 'gold' : points >= 500 ? 'silver' : 'bronze';
-  const tier = TIER[tierKey];
-  const nextTier = { bronze: TIER.silver, silver: TIER.gold, gold: TIER.platinum, platinum: null }[tierKey];
-  const progressPct = nextTier ? Math.min(((points - tier.min) / (nextTier.min - tier.min)) * 100, 100) : 100;
-
-  const activeVouchers = (cu.vouchers || []).filter(v => !v.isUsed && new Date(v.expiresAt) > new Date());
-
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: '#9ca3af', fontSize: 14 }}>
-      Loading dashboard...
-    </div>
-  );
-
-  const TABS = [
-    { k: 'overview', l: 'Overview', I: Zap },
-    { k: 'routine',  l: 'My Routine', I: Sun },
-    { k: 'orders',   l: 'Orders', I: Package },
-    { k: 'rewards',  l: 'Rewards', I: Award },
-    { k: 'vouchers', l: 'Vouchers', I: Ticket },
-  ];
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1rem', fontFamily: 'system-ui, sans-serif' }}>
-
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', background: `linear-gradient(135deg, ${M}, #7B2D3C)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>
-            {cu.name?.[0]?.toUpperCase() || 'U'}
-          </div>
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 800, color: '#1f2937', margin: 0 }}>
-              Hello, {cu.name?.split(' ')[0]}!
-            </h1>
-            <p style={{ color: '#9ca3af', fontSize: 11, margin: 0 }}>{cu.email}</p>
-          </div>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">My Account</h1>
+          <p className="text-gray-500 text-sm">Manage your orders, wishlist, and profile</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Link to="/products" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: M, color: '#fff', borderRadius: 9, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
-            <ShoppingBag size={14} /> Shop
+        <div className="flex gap-3">
+          <Link to="/products" className="bg-maroon text-white px-4 py-2 rounded-lg hover:bg-maroon-light transition flex items-center gap-2">
+            <ShoppingBag size={18} /> Shop Now
           </Link>
-          <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', border: '1px solid #e5e7eb', borderRadius: 9, background: '#fff', color: '#6b7280', cursor: 'pointer', fontSize: 13 }}>
-            <LogOut size={14} /> Sign Out
+          <button onClick={logout} className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition flex items-center gap-2">
+            <LogOut size={18} /> Logout
           </button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-        <StatCard icon={Star}    label="Glow Points"  value={points}                      color={M} />
-        <StatCard icon={Package} label="Orders"       value={orders.length}               color="#1d4ed8" />
-        <StatCard icon={Wallet}  label="Total Spent"  value={`₹${Math.round(totalSpent).toLocaleString('en-IN')}`} color="#047857" />
-        <StatCard icon={Award}   label="Loyalty Tier" value={tier.label}                  color={tier.color} />
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, background: '#f3f4f6', borderRadius: 10, padding: 4, width: 'fit-content', marginBottom: 20, flexWrap: 'wrap' }}>
-        {TABS.map(({ k, l, I }) => (
-          <Tab key={k} label={l} active={tab === k} onClick={() => setTab(k)} icon={I} />
-        ))}
-      </div>
-
-      {/* ── OVERVIEW ── */}
-      {tab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Loyalty card */}
-          <div style={{ background: tier.bg, border: `1.5px solid ${tier.color}30`, borderRadius: 16, padding: '20px 24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 800, color: tier.color, fontSize: 13, marginBottom: 3 }}>
-                  <Trophy size={15} /> {tier.label.toUpperCase()} MEMBER
-                </div>
-                <div style={{ fontSize: 11, color: '#6b7280' }}>
-                  {nextTier ? `${nextTier.min - points} pts to ${nextTier.label}` : "Top tier — maximum rewards unlocked!"}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: tier.color, lineHeight: 1 }}>{points}</div>
-                <div style={{ fontSize: 10, color: '#9ca3af' }}>Glow Points</div>
-              </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-maroon/10 rounded-full flex items-center justify-center">
+              <ShoppingBag size={20} className="text-maroon" />
             </div>
-            <div style={{ background: '#e5e7eb', borderRadius: 999, height: 8, overflow: 'hidden', marginBottom: 6 }}>
-              <div style={{ height: 8, background: tier.bar, width: `${progressPct}%`, borderRadius: 999, transition: 'width 0.8s ease' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#9ca3af' }}>
-              <span>₹{Math.round(totalSpent).toLocaleString('en-IN')} spent</span>
-              <span>500 pts = ₹50 off</span>
+            <div>
+              <p className="text-2xl font-bold text-gray-800">{stats.totalOrders || 0}</p>
+              <p className="text-sm text-gray-500">Total Orders</p>
             </div>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-            {/* Quick actions */}
-            <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, color: '#1f2937', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Zap size={14} color={M} /> Quick Actions
-              </div>
-              {[
-                { to: '/products', label: 'Browse Products', icon: ShoppingBag },
-                { to: '/quiz',     label: 'Take Skin Quiz',  icon: Sparkles },
-              ].map(({ to, label, icon: Icon }) => (
-                <Link key={to} to={to} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f9fafb', borderRadius: 8, padding: '9px 12px', textDecoration: 'none', color: '#374151', fontSize: 13, fontWeight: 500, marginBottom: 6, border: '1px solid #f3f4f6', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Icon size={14} color={M} /> {label}
-                  </div>
-                  <ArrowRight size={12} color="#d1d5db" />
-                </Link>
-              ))}
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <Star size={20} className="text-green-600" />
             </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-800">{points}</p>
+              <p className="text-sm text-gray-500">Glow Points</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+              <Heart size={20} className="text-purple-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-800">{wishlist.length}</p>
+              <p className="text-sm text-gray-500">Wishlist Items</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <Truck size={20} className="text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-800">{orders.filter(o => o.status === 'delivered').length}</p>
+              <p className="text-sm text-gray-500">Delivered Orders</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Latest order */}
-            {orders.length > 0 && (
-              <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, color: '#1f2937', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Package size={14} color={M} /> Latest Order
-                </div>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
-                  #{orders[0].orderNumber || orders[0]._id.slice(-8).toUpperCase()}
-                </div>
-                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
-                  {orders[0].items?.map(i => i.name).slice(0, 2).join(', ')}{orders[0].items?.length > 2 ? ` +${orders[0].items.length - 2} more` : ''}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontWeight: 800, color: M, fontSize: 15 }}>₹{(orders[0].grandTotal || orders[0].totalAmount || 0).toLocaleString('en-IN')}</div>
-                  <span style={{
-                    background: (ORDER_STATUS[orders[0].status] || ORDER_STATUS.pending).bg,
-                    color: (ORDER_STATUS[orders[0].status] || ORDER_STATUS.pending).color,
-                    fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999
-                  }}>
-                    {(ORDER_STATUS[orders[0].status] || ORDER_STATUS.pending).label.toUpperCase()}
-                  </span>
-                </div>
-                <button onClick={() => setTab('orders')} style={{ marginTop: 10, fontSize: 11, color: M, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
-                  View all orders <ChevronRight size={11} />
-                </button>
+      {/* Loyalty Card */}
+      <div className={`bg-gradient-to-r ${currentTier.bg} rounded-xl p-6 mb-8 border`}>
+        <div className="flex justify-between items-start flex-wrap gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">{currentTier.icon}</span>
+              <h2 className="text-xl font-bold text-gray-800">{currentTier.name} Member</h2>
+            </div>
+            <p className="text-gray-600 text-sm">You've spent ₹{spent.toLocaleString('en-IN')}</p>
+            {nextTier && (
+              <p className="text-sm text-gray-500 mt-1">
+                ₹{(nextTier.min - spent).toLocaleString('en-IN')} more to reach {nextTier.name}
+              </p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-3xl font-bold text-gray-800">{points}</p>
+            <p className="text-sm text-gray-500">GlowPoints earned</p>
+          </div>
+        </div>
+        {nextTier && (
+          <div className="mt-4">
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-maroon rounded-full transition-all" style={{ width: `${progressToNext}%` }} />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">{Math.round(progressToNext)}% to {nextTier.name}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="flex gap-6 overflow-x-auto">
+          {[
+            { id: 'overview', label: 'Overview', icon: User },
+            { id: 'orders', label: 'Orders', icon: Package },
+            { id: 'wishlist', label: 'Wishlist', icon: Heart },
+            { id: 'addresses', label: 'Addresses', icon: MapPin },
+            { id: 'profile', label: 'Profile', icon: Settings }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 pb-3 px-1 transition ${
+                activeTab === tab.id 
+                  ? 'border-b-2 border-maroon text-maroon font-medium' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <tab.icon size={18} />
+              <span className="text-sm">{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Recent Orders */}
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-gray-800">Recent Orders</h3>
+              <button onClick={() => setActiveTab('orders')} className="text-maroon text-sm hover:underline">View All</button>
+            </div>
+            {orders.length === 0 ? (
+              <div className="text-center py-8">
+                <Package size={40} className="mx-auto text-gray-300 mb-3" />
+                <p className="text-gray-500">No orders yet</p>
+                <Link to="/products" className="text-maroon text-sm mt-2 inline-block">Start Shopping →</Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {orders.slice(0, 3).map(order => {
+                  const StatusIcon = ORDER_STATUS[order.status]?.icon || Package;
+                  return (
+                    <div key={order._id} className="border rounded-lg p-4 hover:shadow-md transition">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-gray-800">Order #{order.orderNumber?.slice(-8)}</p>
+                          <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                            <Calendar size={12} /> {new Date(order.orderDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-maroon">₹{(order.grandTotal || 0).toFixed(2)}</p>
+                          <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${ORDER_STATUS[order.status]?.bg} ${ORDER_STATUS[order.status]?.color}`}>
+                            <StatusIcon size={12} />
+                            {ORDER_STATUS[order.status]?.label || order.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-sm text-gray-500">
+                        {order.items?.slice(0, 2).map(i => i.name).join(', ')}
+                        {order.items?.length > 2 && ` + ${order.items.length - 2} more`}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
+          </div>
 
-            {/* Points perks */}
-            <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, color: '#1f2937', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Heart size={14} color={M} /> Earn More Points
+          {/* Quick Actions & Wishlist Preview */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+              <h3 className="font-semibold text-gray-800 mb-3">Quick Actions</h3>
+              <div className="space-y-2">
+                <Link to="/products" className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition">
+                  <ShoppingBag size={18} className="text-maroon" />
+                  <span className="text-sm">Continue Shopping</span>
+                </Link>
+                <Link to="/quiz" className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition">
+                  <Sparkles size={18} className="text-maroon" />
+                  <span className="text-sm">Take Skin Quiz</span>
+                </Link>
               </div>
-              {[
-                { label: 'Place an order', pts: '+10 pts/₹100' },
-                { label: 'Write a review', pts: '+25 pts' },
-                { label: 'Refer a friend', pts: '+200 pts' },
-                { label: 'Recycle bottle', pts: '+50 pts' },
-              ].map(({ label, pts }) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f9fafb', fontSize: 12 }}>
-                  <span style={{ color: '#4b5563' }}>{label}</span>
-                  <span style={{ fontWeight: 700, color: M }}>{pts}</span>
-                </div>
-              ))}
             </div>
+
+            {/* Wishlist Preview */}
+            {wishlist.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-semibold text-gray-800">Wishlist</h3>
+                  <button onClick={() => setActiveTab('wishlist')} className="text-maroon text-sm hover:underline">View All</button>
+                </div>
+                <div className="space-y-2">
+                  {wishlist.slice(0, 2).map(product => (
+                    <div key={product._id} className="flex gap-3">
+                      <img src={product.images?.[0] || '/api/placeholder/60/60'} className="w-12 h-12 object-cover rounded" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{product.name}</p>
+                        <p className="text-maroon font-bold text-sm">₹{(product.price || 0).toFixed(2)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ── ROUTINE ── */}
-      {tab === 'routine' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
-          {[
-            { key: 'amRoutine', label: 'Morning Routine', tag: 'AM', icon: Sun, tagColor: '#d97706', tagBg: '#fef3c7', headerBg: '#fffbeb' },
-            { key: 'pmRoutine', label: 'Evening Routine', tag: 'PM', icon: Moon, tagColor: '#6366f1', tagBg: '#e0e7ff', headerBg: '#eef2ff' },
-          ].map(({ key, label, tag, icon: Icon, tagColor, tagBg, headerBg }) => (
-            <div key={key} style={{ background: '#fff', borderRadius: 14, border: '1px solid #f0f0f0', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-              <div style={{ background: headerBg, padding: '14px 18px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Icon size={18} color={tagColor} />
-                <span style={{ fontWeight: 700, fontSize: 14 }}>{label}</span>
-                <span style={{ background: tagBg, color: tagColor, fontSize: 10, padding: '2px 7px', borderRadius: 999, fontWeight: 700 }}>{tag}</span>
+     {/* Orders Tab */}
+{activeTab === 'orders' && (
+  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <h3 className="font-semibold text-gray-800 mb-4">All Orders</h3>
+    {orders.length === 0 ? (
+      <div className="text-center py-12">
+        <Package size={48} className="mx-auto text-gray-300 mb-3" />
+        <p className="text-gray-500">No orders yet</p>
+        <Link to="/products" className="text-maroon mt-2 inline-block">Start Shopping →</Link>
+      </div>
+    ) : (
+      <div className="space-y-4">
+        {orders.map(order => {
+          const StatusIcon = ORDER_STATUS[order.status]?.icon || Package;
+          const canReview = order.status === 'delivered';
+          const reviewedProducts = []; // You can track reviewed products from state
+          
+          return (
+            <div key={order._id} className="border rounded-lg p-4 hover:shadow-md transition cursor-pointer" onClick={() => openOrderDetails(order)}>
+              <div className="flex justify-between items-start flex-wrap gap-3">
+                <div>
+                  <p className="font-medium text-gray-800">Order #{order.orderNumber}</p>
+                  <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                    <Calendar size={14} /> {new Date(order.orderDate).toLocaleDateString()}
+                    <span className="text-gray-300">|</span>
+                    <span className="capitalize">{order.paymentMethod}</span>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-maroon text-lg">₹{(order.grandTotal || 0).toFixed(2)}</p>
+                  <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${ORDER_STATUS[order.status]?.bg} ${ORDER_STATUS[order.status]?.color}`}>
+                    <StatusIcon size={12} />
+                    {ORDER_STATUS[order.status]?.label || order.status}
+                  </span>
+                </div>
               </div>
-              <div style={{ padding: '14px 18px' }}>
-                {!routine[key]?.length ? (
-                  <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                    <Sparkles size={28} color="#e5e7eb" style={{ margin: '0 auto 10px', display: 'block' }} />
-                    <p style={{ color: '#9ca3af', fontSize: 13, marginBottom: 10 }}>No products in your {tag} routine yet</p>
-                    <Link to="/quiz" style={{ color: M, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
-                      Take the skin quiz <ArrowRight size={12} />
-                    </Link>
-                  </div>
-                ) : routine[key].map((product, idx) => (
-                  <div key={product._id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px', background: '#f9fafb', borderRadius: 10, marginBottom: 8 }}>
-                    <div style={{ width: 26, height: 26, background: M, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 11, flexShrink: 0 }}>
-                      {idx + 1}
+              <div className="border-t mt-3 pt-3">
+                <p className="text-sm font-medium mb-2">Items ({order.items?.length}):</p>
+                <div className="space-y-1">
+                  {order.items?.slice(0, 3).map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-sm">
+                      <span>{item.name} x {item.quantity}</span>
+                      <span>₹{(item.price * item.quantity).toFixed(2)}</span>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2 }}>{product.name}</div>
-                      <div style={{ fontSize: 10, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {product.description?.substring(0, 55)}...
-                      </div>
-                    </div>
-                    <Link to={`/product/${product._id}`} style={{ fontSize: 11, color: M, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>View</Link>
-                  </div>
-                ))}
+                  ))}
+                  {order.items?.length > 3 && (
+                    <p className="text-xs text-gray-500">+{order.items.length - 3} more items</p>
+                  )}
+                </div>
               </div>
             </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+)}
+
+      {/* Wishlist Tab */}
+      {activeTab === 'wishlist' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <h3 className="font-semibold text-gray-800 mb-4">My Wishlist</h3>
+          {wishlist.length === 0 ? (
+            <div className="text-center py-12">
+              <Heart size={48} className="mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500">Your wishlist is empty</p>
+              <Link to="/products" className="text-maroon mt-2 inline-block">Explore Products →</Link>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {wishlist.map(product => (
+                <div key={product._id} className="border rounded-lg p-3 hover:shadow-md transition">
+                  <img src={product.images?.[0] || '/api/placeholder/120/120'} className="w-full h-32 object-cover rounded mb-3" />
+                  <h4 className="font-medium text-gray-800 line-clamp-1">{product.name}</h4>
+                  <p className="text-maroon font-bold mt-1">₹{(product.price || 0).toFixed(2)}</p>
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => handleAddToCart(product)} className="flex-1 bg-maroon text-white text-sm py-1.5 rounded hover:bg-maroon-light transition">
+                      Add to Cart
+                    </button>
+                    <button onClick={() => removeFromWishlist(product._id)} className="p-1.5 border rounded hover:bg-gray-50 transition">
+                      <Trash2 size={16} className="text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Addresses Tab */}
+      {activeTab === 'addresses' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-semibold text-gray-800">Saved Addresses</h3>
+            <button onClick={() => setShowAddressForm(true)} className="bg-maroon text-white px-3 py-1.5 rounded-lg text-sm flex items-center gap-1">
+              <Plus size={16} /> Add Address
+            </button>
+          </div>
+
+     {/* Address Form Modal */}
+{showAddressForm && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-semibold">{editingAddress ? 'Edit Address' : 'Add New Address'}</h3>
+        <button onClick={() => { setShowAddressForm(false); setEditingAddress(null); }} className="text-gray-500 hover:text-gray-700">
+          <X size={20} />
+        </button>
+      </div>
+      
+      {/* Location Detector */}
+        <div className="mb-4">
+        <LocationDetector 
+          onAddressFetched={(address) => {
+            setAddressForm({
+              ...addressForm,
+              street: address.street || addressForm.street,
+              city: address.city || addressForm.city,
+              state: address.state || addressForm.state,
+              zipCode: address.zipCode || addressForm.zipCode,
+              country: address.country || addressForm.country
+            });
+          }}
+          buttonText="Use My Current Location"
+        />
+        <div className="relative my-3">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200"></div>
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-white px-2 text-gray-500">Or enter manually</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <input type="text" placeholder="Full Name" className="border rounded-lg p-2 text-sm" value={addressForm.name} onChange={e => setAddressForm({...addressForm, name: e.target.value})} />
+          <input type="tel" placeholder="Phone" className="border rounded-lg p-2 text-sm" value={addressForm.phone} onChange={e => setAddressForm({...addressForm, phone: e.target.value})} />
+        </div>
+        <input type="text" placeholder="Street Address" className="border rounded-lg p-2 text-sm w-full" value={addressForm.street} onChange={e => setAddressForm({...addressForm, street: e.target.value})} />
+        <input type="text" placeholder="Landmark (Optional)" className="border rounded-lg p-2 text-sm w-full" value={addressForm.landmark} onChange={e => setAddressForm({...addressForm, landmark: e.target.value})} />
+        <div className="grid grid-cols-2 gap-3">
+          <input type="text" placeholder="City" className="border rounded-lg p-2 text-sm" value={addressForm.city} onChange={e => setAddressForm({...addressForm, city: e.target.value})} />
+          <select className="border rounded-lg p-2 text-sm" value={addressForm.state} onChange={e => setAddressForm({...addressForm, state: e.target.value})}>
+            <option value="">Select State</option>
+            {["Maharashtra","Delhi","Karnataka","Tamil Nadu","Telangana","West Bengal","Gujarat","Rajasthan","Uttar Pradesh","Punjab","Haryana","Kerala","Bihar","Madhya Pradesh","Assam","Odisha","Chhattisgarh","Jharkhand","Uttarakhand","Himachal Pradesh","Goa","Puducherry"].map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <input type="text" placeholder="ZIP Code" className="border rounded-lg p-2 text-sm" value={addressForm.zipCode} onChange={e => setAddressForm({...addressForm, zipCode: e.target.value})} />
+          <select className="border rounded-lg p-2 text-sm" value={addressForm.label} onChange={e => setAddressForm({...addressForm, label: e.target.value})}>
+            <option value="Home">Home</option>
+            <option value="Work">Work</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={addressForm.isDefault} onChange={e => setAddressForm({...addressForm, isDefault: e.target.checked})} />
+          <span className="text-sm">Set as default address</span>
+        </label>
+        <button onClick={saveAddress} className="w-full bg-maroon text-white py-2 rounded-lg mt-2">Save Address</button>
+      </div>
+    </div>
+  </div>
+)}
+
+          <div className="space-y-3">
+            {addresses.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No saved addresses</p>
+            ) : (
+              addresses.map(addr => (
+                <div key={addr._id} className={`border rounded-lg p-4 ${addr.isDefault ? 'border-maroon/30 bg-maroon/5' : ''}`}>
+                  <div className="flex justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        {addr.label === 'Work' ? <Briefcase size={14} /> : <Home size={14} />}
+                        <span className="font-medium">{addr.label}</span>
+                        {addr.isDefault && <span className="text-xs bg-maroon/20 text-maroon px-2 py-0.5 rounded">Default</span>}
+                      </div>
+                      <p className="font-medium">{addr.name}</p>
+                      <p className="text-sm text-gray-600">{addr.street}, {addr.city}</p>
+                      <p className="text-sm text-gray-600">{addr.state} - {addr.zipCode}</p>
+                      <p className="text-sm text-gray-500 mt-1">{addr.phone}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => { setEditingAddress(addr); setAddressForm(addr); setShowAddressForm(true); }} className="text-blue-500 hover:text-blue-700">
+                        <Edit2 size={16} />
+                      </button>
+                      <button onClick={() => deleteAddress(addr._id)} className="text-red-500 hover:text-red-700">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+{/* Order Details Modal */}
+{showOrderModal && selectedOrder && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+        <h3 className="font-semibold text-lg">Order Details</h3>
+        <button onClick={() => setShowOrderModal(false)} className="text-gray-500 hover:text-gray-700">
+          <X size={20} />
+        </button>
+      </div>
+      
+      <div className="p-6">
+        {/* Order Header */}
+        <div className="mb-6">
+          <p className="text-sm text-gray-500">Order #{selectedOrder.orderNumber}</p>
+          <p className="text-sm text-gray-500">Placed on {new Date(selectedOrder.orderDate).toLocaleDateString()}</p>
+          <div className="mt-2">
+            <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${ORDER_STATUS[selectedOrder.status]?.bg} ${ORDER_STATUS[selectedOrder.status]?.color}`}>
+              {ORDER_STATUS[selectedOrder.status]?.label || selectedOrder.status}
+            </span>
+          </div>
+        </div>
+        
+        {/* Items - Now clickable */}
+        <div className="mb-6">
+          <h4 className="font-semibold mb-3">Items</h4>
+          <div className="space-y-3">
+            {selectedOrder.items?.map((item, idx) => (
+              <div key={idx} className="flex gap-4 border-b pb-3 group">
+                {/* Product Image - Clickable */}
+                <Link 
+                 to={item.product?._id ? `/product/${item.product._id}` : '#'}
+                  className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 hover:opacity-80 transition"
+                >
+                  <img 
+                    src={item.product?.images?.[0] || item.image || '/api/placeholder/60/60'} 
+                    className="w-full h-full object-cover" 
+                    alt={item.name}
+                  />
+                </Link>
+                
+                {/* Product Details - Clickable */}
+                <div className="flex-1">
+                  <Link 
+                   to={item.product?._id ? `/product/${item.product._id}` : '#'}
+                    className="font-medium hover:text-maroon transition"
+                  >
+                    {item.name}
+                  </Link>
+                  <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
+                  <p className="text-sm text-gray-500">Price: ₹{item.price.toFixed(2)}</p>
+                </div>
+                
+                <div className="text-right">
+                  <p className="font-bold">₹{(item.price * item.quantity).toFixed(2)}</p>
+                  {selectedOrder.status === 'delivered' && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openReviewModal(item, selectedOrder._id);
+                      }}
+                      className="text-maroon text-sm hover:underline mt-1"
+                    >
+                      Write a Review
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Shipping Address */}
+        <div className="mb-6">
+          <h4 className="font-semibold mb-2">Shipping Address</h4>
+          <p className="text-sm text-gray-600">{selectedOrder.shippingAddress?.street}</p>
+          <p className="text-sm text-gray-600">{selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state}</p>
+          <p className="text-sm text-gray-600">{selectedOrder.shippingAddress?.zipCode}</p>
+          <p className="text-sm text-gray-600">Phone: {selectedOrder.phone}</p>
+        </div>
+        
+        {/* Payment Summary */}
+        <div className="border-t pt-4">
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Subtotal</span>
+              <span>₹{(selectedOrder.totalAmount || 0).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>Tax (18% GST)</span>
+              <span>₹{(selectedOrder.taxAmount || 0).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>Shipping</span>
+              <span>{selectedOrder.shippingAmount === 0 ? 'Free' : `₹${(selectedOrder.shippingAmount || 0).toFixed(2)}`}</span>
+            </div>
+            {selectedOrder.discountAmount > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>Discount</span>
+                <span>-₹{(selectedOrder.discountAmount || 0).toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold text-lg pt-2 border-t">
+              <span>Total</span>
+              <span className="text-maroon">₹{(selectedOrder.grandTotal || 0).toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="mt-6 flex gap-3">
+          <button 
+            onClick={() => window.print()}
+            className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50 transition"
+          >
+            Print Order
+          </button>
+          <Link 
+            to={`/invoice/${selectedOrder._id}`}
+            className="flex-1 bg-maroon text-white py-2 rounded-lg text-center hover:bg-maroon-light transition"
+          >
+            Download Invoice
+          </Link>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+
+{/* Review Modal */}
+{showReviewModal && reviewProduct && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-xl max-w-md w-full p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-semibold">Review Product</h3>
+        <button onClick={() => setShowReviewModal(false)} className="text-gray-500 hover:text-gray-700">
+          <X size={20} />
+        </button>
+      </div>
+      
+      <div className="mb-4">
+        <p className="font-medium">{reviewProduct.name}</p>
+        <div className="flex gap-1 mt-2">
+          {[1, 2, 3, 4, 5].map(star => (
+            <button
+              key={star}
+              onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+              className="focus:outline-none"
+            >
+              <Star 
+                size={24} 
+                className={star <= reviewForm.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+              />
+            </button>
           ))}
         </div>
-      )}
-
-      {/* ── ORDERS ── */}
-      {tab === 'orders' && (
-        <div>
-          {orders.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: 14, border: '1px solid #f0f0f0' }}>
-              <Package size={40} color="#e5e7eb" style={{ margin: '0 auto 12px', display: 'block' }} />
-              <p style={{ color: '#9ca3af', marginBottom: 16, fontSize: 14 }}>No orders yet</p>
-              <Link to="/products" style={{ background: M, color: '#fff', padding: '8px 20px', borderRadius: 9, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
-                Start Shopping
-              </Link>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {orders.map(order => {
-                const s = ORDER_STATUS[order.status] || ORDER_STATUS.pending;
-                return (
-                  <div key={order._id} style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontWeight: 700, fontSize: 13 }}>#{order.orderNumber || order._id.slice(-8).toUpperCase()}</span>
-                        <span style={{ fontSize: 10, color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <Calendar size={10} /> {new Date(order.orderDate || order.createdAt).toLocaleDateString('en-IN')}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ background: s.bg, color: s.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999 }}>{s.label.toUpperCase()}</span>
-                        <span style={{ fontWeight: 800, color: M, fontSize: 14 }}>₹{(order.grandTotal || order.totalAmount || 0).toLocaleString('en-IN')}</span>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 12, color: '#6b7280' }}>
-                      {order.items?.map(i => i.name).join(', ') || '—'}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── REWARDS ── */}
-      {tab === 'rewards' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-          {[
-            { points: 0,    label: 'Welcome Bonus',      description: 'Account created',        icon: Gift },
-            { points: 100,  label: '₹10 off next order', description: '100 pts required',       icon: Ticket },
-            { points: 250,  label: 'Free delivery',      description: '250 pts required',       icon: Box },
-            { points: 500,  label: '₹50 off any order',  description: '500 pts required',       icon: Star },
-            { points: 1000, label: '₹150 off + gift',    description: '1000 pts required',      icon: Trophy },
-            { points: 2000, label: 'Platinum status',    description: 'Exclusive perks forever', icon: Shield },
-          ].map(r => <RewardCard key={r.points} {...r} currentPoints={points} />)}
-        </div>
-      )}
-
-      {/* ── VOUCHERS ── */}
-      {tab === 'vouchers' && (
-        <div>
-          {activeVouchers.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: 14, border: '1px solid #f0f0f0', color: '#9ca3af' }}>
-              <Ticket size={36} color="#e5e7eb" style={{ margin: '0 auto 12px', display: 'block' }} />
-              <p style={{ fontSize: 14, marginBottom: 6 }}>No active vouchers</p>
-              <p style={{ fontSize: 12 }}>New users receive a 15% welcome voucher on signup.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
-              {activeVouchers.map((v, i) => <VoucherCard key={i} voucher={v} />)}
-            </div>
-          )}
-        </div>
-      )}
+      </div>
+      
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Review title (optional)"
+          className="w-full border rounded-lg p-2 mb-3"
+          value={reviewForm.title}
+          onChange={(e) => setReviewForm({ ...reviewForm, title: e.target.value })}
+        />
+        <textarea
+          rows="4"
+          placeholder="Write your review here..."
+          className="w-full border rounded-lg p-2"
+          value={reviewForm.comment}
+          onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+        />
+      </div>
+      
+      <button
+        onClick={submitReview}
+        disabled={submittingReview}
+        className="w-full bg-maroon text-white py-2 rounded-lg font-semibold hover:bg-maroon-light disabled:bg-gray-400"
+      >
+        {submittingReview ? 'Submitting...' : 'Submit Review (+25 GlowPoints)'}
+      </button>
+    </div>
+  </div>
+)}
+     
+      {/* Profile Tab */}
+{activeTab === 'profile' && (
+  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <h3 className="font-semibold text-gray-800 mb-4">Profile Information</h3>
+    <div className="max-w-md space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+        <input 
+          type="text" 
+          id="profileName"
+          defaultValue={cu.name} 
+          className="w-full border rounded-lg p-2" 
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <input 
+          type="email" 
+          defaultValue={cu.email} 
+          disabled 
+          className="w-full border rounded-lg p-2 bg-gray-50" 
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+        <input 
+          type="tel" 
+          id="profilePhone"
+          defaultValue={cu.phone || ''} 
+          className="w-full border rounded-lg p-2" 
+        />
+      </div>
+      <div className="flex gap-2">
+        <input type="checkbox" id="newsletter" defaultChecked={cu.preferences?.newsletter} />
+        <label htmlFor="newsletter" className="text-sm text-gray-600">Subscribe to email updates and offers</label>
+      </div>
+      <button 
+        onClick={async () => {
+          const name = document.getElementById('profileName').value;
+          const phone = document.getElementById('profilePhone').value;
+          const newsletter = document.getElementById('newsletter').checked;
+          
+          try {
+            const token = localStorage.getItem('token');
+            await axios.put(`${API_URL}/auth/profile`, 
+              { name, phone, preferences: { newsletter } },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            alert('Profile updated successfully!');
+            fetchDashboardData();
+          } catch (error) {
+            console.error('Error updating profile:', error);
+            alert('Failed to update profile');
+          }
+        }}
+        className="bg-maroon text-white px-6 py-2 rounded-lg hover:bg-maroon-light transition"
+      >
+        Save Changes
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 }
+
+// Add Briefcase icon if not already in lucide-react

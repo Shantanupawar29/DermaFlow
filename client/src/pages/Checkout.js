@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import LocationDetector from '../components/LocationDetector';
 
 const Checkout = () => {
   const { cartItems, totalPrice, clearCart } = useCart();
@@ -14,10 +15,67 @@ const Checkout = () => {
   const [discount, setDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponMessage, setCouponMessage] = useState('');
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+  const [useNewAddress, setUseNewAddress] = useState(true);
   const [formData, setFormData] = useState({
     address: { street: '', city: '', state: '', zipCode: '', country: 'India' },
     phone: ''
   });
+
+  // Fetch saved addresses
+  useEffect(() => {
+    if (user) {
+      fetchSavedAddresses();
+    }
+  }, [user]);
+
+  const fetchSavedAddresses = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/profile/addresses', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSavedAddresses(response.data || []);
+      
+      // Set default address if exists
+      const defaultAddr = response.data?.find(addr => addr.isDefault);
+      if (defaultAddr) {
+        setSelectedAddressId(defaultAddr._id);
+        setUseNewAddress(false);
+        setFormData({
+          address: {
+            street: defaultAddr.street,
+            city: defaultAddr.city,
+            state: defaultAddr.state,
+            zipCode: defaultAddr.zipCode,
+            country: defaultAddr.country || 'India'
+          },
+          phone: defaultAddr.phone
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
+    }
+  };
+
+  const handleSelectAddress = (addressId) => {
+    const address = savedAddresses.find(a => a._id === addressId);
+    if (address) {
+      setSelectedAddressId(addressId);
+      setUseNewAddress(false);
+      setFormData({
+        address: {
+          street: address.street,
+          city: address.city,
+          state: address.state,
+          zipCode: address.zipCode,
+          country: address.country || 'India'
+        },
+        phone: address.phone
+      });
+    }
+  };
 
   const validCoupons = {
     'WELCOME15': { type: 'percentage', value: 15, minOrder: 500 },
@@ -25,39 +83,29 @@ const Checkout = () => {
     'GLOW10': { type: 'percentage', value: 10, minOrder: 300 },
     'FREESHIP': { type: 'freeshipping', value: 0, minOrder: 999 }
   };
-const fetchAddressFromPincode = async (pincode) => {
-  // Only trigger when EXACTLY 6 digits
-  if (!/^\d{6}$/.test(pincode)) return;
 
-  try {
-    console.log("Fetching address for:", pincode);
-
-    const res = await axios.get(`http://localhost:5000/api/pincode/${pincode}`);
-
-    const data = res.data[0];
-
-    if (data.Status === "Success" && data.PostOffice?.length > 0) {
-      const postOffice = data.PostOffice[0];
-
-      console.log("API Response:", postOffice);
-
-      setFormData((prev) => ({
-        ...prev,
-        address: {
-          ...prev.address,
-          city: postOffice.District || "",
-          state: postOffice.State || "",
-          street: postOffice.Name || prev.address.street,
-          country: "India"
-        }
-      }));
-    } else {
-      console.log("Invalid pincode");
+  const fetchAddressFromPincode = async (pincode) => {
+    if (!/^\d{6}$/.test(pincode)) return;
+    try {
+      const res = await axios.get(`http://localhost:5000/api/pincode/${pincode}`);
+      const data = res.data[0];
+      if (data.Status === "Success" && data.PostOffice?.length > 0) {
+        const postOffice = data.PostOffice[0];
+        setFormData((prev) => ({
+          ...prev,
+          address: {
+            ...prev.address,
+            city: postOffice.District || "",
+            state: postOffice.State || "",
+            country: "India"
+          }
+        }));
+      }
+    } catch (error) {
+      console.error("Pincode fetch error:", error);
     }
-  } catch (error) {
-    console.error("Pincode fetch error:", error);
-  }
-};
+  };
+
   const applyCoupon = () => {
     const code = couponCode.toUpperCase();
     const coupon = validCoupons[code];
@@ -90,18 +138,10 @@ const fetchAddressFromPincode = async (pincode) => {
     setTimeout(() => setCouponMessage(''), 3000);
   };
 
-  // IMPORTANT: totalPrice from CartContext is already in rupees
-  // Because cartItems store price in paise, but totalPrice converts to rupees
   const taxAmount = totalPrice * 0.18;
   const shippingAmount = totalPrice > 1000 ? 0 : 50;
   const discountedTotal = totalPrice - discount;
   const grandTotal = discountedTotal + taxAmount + shippingAmount;
-
-  console.log('Price breakdown (in rupees):');
-  console.log('Total Price:', totalPrice);
-  console.log('Discount:', discount);
-  console.log('Tax:', taxAmount);
-  console.log('Grand Total:', grandTotal);
 
   const loadRazorpayScript = () => new Promise((resolve) => {
     if (window.Razorpay) return resolve(true);
@@ -114,23 +154,13 @@ const fetchAddressFromPincode = async (pincode) => {
 
   const createOrderAndRedirect = async (orderData) => {
     try {
-      console.log('Creating order with data:', orderData);
-      
       const response = await axios.post('http://localhost:5000/api/orders', orderData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       
-      console.log('Order created successfully:', response.data);
-      console.log('Order ID:', response.data._id);
-      
       const orderId = response.data._id;
-      
       clearCart();
-      console.log('Cart cleared');
-      
-      // Navigate to order confirmation
       navigate(`/order-confirmation/${orderId}`);
-      
       return true;
     } catch (error) {
       console.error('Order creation failed:', error.response?.data || error.message);
@@ -148,14 +178,11 @@ const fetchAddressFromPincode = async (pincode) => {
         return;
       }
       
-      // Convert rupees to paise for Razorpay (multiply by 100)
       const amountInPaise = Math.round(grandTotal * 100);
-      console.log('💰 Sending amount to backend (paise):', amountInPaise);
-      console.log('💰 Original amount (rupees):', grandTotal);
       
       const { data: razorpayOrder } = await axios.post(
         'http://localhost:5000/api/payment/create-order',
-        { amount: amountInPaise }, // Send in paise
+        { amount: amountInPaise },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
 
@@ -196,12 +223,12 @@ const fetchAddressFromPincode = async (pincode) => {
                   product: item.id || item._id,
                   quantity: item.quantity,
                   name: item.name,
-                  price: item.price, // Price in paise from cart
+                  price: item.price,
                 })),
                 shippingAddress: formData.address,
                 paymentMethod: 'razorpay',
                 phone: formData.phone,
-                totalAmount: Math.round(grandTotal * 100), // Store in paise
+                totalAmount: Math.round(grandTotal * 100),
                 discountAmount: Math.round(discount * 100),
                 couponCode: couponApplied ? couponCode : null,
               };
@@ -226,13 +253,11 @@ const fetchAddressFromPincode = async (pincode) => {
       };
 
       const rzp = new window.Razorpay(options);
-
       rzp.on('payment.failed', (response) => {
         console.error('Payment failed event:', response.error);
         alert('Payment failed: ' + response.error.description);
         setLoading(false);
       });
-
       rzp.open();
     } catch (error) {
       console.error('Payment error:', error.response?.data || error.message);
@@ -250,18 +275,17 @@ const fetchAddressFromPincode = async (pincode) => {
       return;
     }
 
-    // COD order
     const orderData = {
       items: cartItems.map(item => ({
         product: item.id,
         quantity: item.quantity,
         name: item.name,
-        price: item.price, // Price in paise
+        price: item.price,
       })),
       shippingAddress: formData.address,
       paymentMethod: 'cod',
       phone: formData.phone,
-      totalAmount: Math.round(grandTotal * 100), // Store in paise
+      totalAmount: Math.round(grandTotal * 100),
       discountAmount: Math.round(discount * 100),
       couponCode: couponApplied ? couponCode : null
     };
@@ -270,7 +294,6 @@ const fetchAddressFromPincode = async (pincode) => {
     setLoading(false);
   };
 
-  // Show empty cart message only if no items AND not loading
   if (cartItems.length === 0 && !loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-16 text-center">
@@ -292,63 +315,134 @@ const fetchAddressFromPincode = async (pincode) => {
           <form onSubmit={handleSubmit}>
             <div className="bg-white rounded-lg shadow p-6 mb-6">
               <h2 className="text-xl font-semibold mb-4">Shipping Address</h2>
-              <div className="grid md:grid-cols-2 gap-4">
-                <input type="text" placeholder="Street Address" required className="border p-2 rounded"
-                  value={formData.address.street} onChange={(e) => setFormData({
-                    ...formData, address: { ...formData.address, street: e.target.value }
-                  })} />
-                <input
-  type="text"
-  placeholder="City"
-  required
-  className="border p-2 rounded bg-gray-100"
-  value={formData.address.city}
-  readOnly
-/>
-<select
-  required
-  className="border p-2 rounded"
-  value={formData.address.state}
-  onChange={(e) => setFormData((prev) => ({
-    ...prev,
-    address: { ...prev.address, state: e.target.value }
-  }))}
->
-  <option value="">Select State</option>
-  {[
-    "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa",
-    "Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala",
-    "Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland",
-    "Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana",
-    "Tripura","Uttar Pradesh","Uttarakhand","West Bengal",
-    "Delhi","Jammu and Kashmir","Ladakh","Puducherry"
-  ].map((state) => (
-    <option key={state} value={state}>{state}</option>
-  ))}
-</select>
-<input
-  type="text"
-  placeholder="Pincode"
-  required
-  maxLength={6}
-  className="border p-2 rounded"
-  value={formData.address.zipCode}
-  onChange={(e) => {
-    const pincode = e.target.value.replace(/\D/g, ""); // allow only numbers
-
-    setFormData((prev) => ({
+              
+              {/* Saved Addresses Section */}
+              {savedAddresses.length > 0 && (
+                <div className="mb-6">
+                  <label className="flex items-center gap-2 mb-3">
+                    <input 
+                      type="radio" 
+                      checked={!useNewAddress} 
+                      onChange={() => {
+                        setUseNewAddress(false);
+                        if (selectedAddressId) {
+                          const addr = savedAddresses.find(a => a._id === selectedAddressId);
+                          if (addr) {
+                            setFormData({
+                              address: {
+                                street: addr.street,
+                                city: addr.city,
+                                state: addr.state,
+                                zipCode: addr.zipCode,
+                                country: addr.country || 'India'
+                              },
+                              phone: addr.phone
+                            });
+                          }
+                        }
+                      }}
+                    />
+                    <span className="font-medium">Use a saved address</span>
+                  </label>
+                  
+                  {!useNewAddress && (
+                    <div className="ml-6 space-y-2">
+                      {savedAddresses.map(addr => (
+                        <label key={addr._id} className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                          <input
+                            type="radio"
+                            name="savedAddress"
+                            checked={selectedAddressId === addr._id}
+                            onChange={() => handleSelectAddress(addr._id)}
+                            className="mt-1"
+                          />
+                          <div>
+                            <p className="font-medium">{addr.name}</p>
+                            <p className="text-sm text-gray-600">{addr.street}, {addr.city}</p>
+                            <p className="text-sm text-gray-600">{addr.state} - {addr.zipCode}</p>
+                            <p className="text-sm text-gray-500">Phone: {addr.phone}</p>
+                            {addr.isDefault && <span className="text-xs text-green-600">Default</span>}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-white px-2 text-gray-500">OR</span>
+                    </div>
+                  </div>
+                  
+                  <label className="flex items-center gap-2">
+                    <input 
+                      type="radio" 
+                      checked={useNewAddress} 
+                      onChange={() => setUseNewAddress(true)}
+                    />
+                    <span className="font-medium">Use a new address</span>
+                  </label>
+                </div>
+              )}
+              
+              {/* New Address Form */}
+              {useNewAddress && (
+                <div className="space-y-4">
+                  <LocationDetector 
+  onAddressFetched={(address) => {
+    setFormData(prev => ({
       ...prev,
-      address: { ...prev.address, zipCode: pincode }
+      address: {
+        ...prev.address,
+        street: address.street || prev.address.street,
+        city: address.city || prev.address.city,
+        state: address.state || prev.address.state,
+        zipCode: address.zipCode || prev.address.zipCode,
+        country: address.country || prev.address.country
+      }
     }));
-
-    if (pincode.length === 6) {
-      fetchAddressFromPincode(pincode);
-    }
   }}
+  buttonText="Use My Current Location"
 />
-                <input type="tel" placeholder="Phone Number" required className="border p-2 rounded"
-                  value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
-              </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <input type="text" placeholder="Street Address" required className="border p-2 rounded"
+                      value={formData.address.street} onChange={(e) => setFormData({
+                        ...formData, address: { ...formData.address, street: e.target.value }
+                      })} />
+                    <input type="text" placeholder="City" required className="border p-2 rounded"
+                      value={formData.address.city} onChange={(e) => setFormData({
+                        ...formData, address: { ...formData.address, city: e.target.value }
+                      })} />
+                    <select required className="border p-2 rounded"
+                      value={formData.address.state}
+                      onChange={(e) => setFormData((prev) => ({
+                        ...prev,
+                        address: { ...prev.address, state: e.target.value }
+                      }))}>
+                      <option value="">Select State</option>
+                      {["Maharashtra","Delhi","Karnataka","Tamil Nadu","Telangana","West Bengal","Gujarat","Rajasthan","Uttar Pradesh","Punjab","Haryana","Kerala"].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <input type="text" placeholder="Pincode" required maxLength={6} className="border p-2 rounded"
+                      value={formData.address.zipCode}
+                      onChange={(e) => {
+                        const pincode = e.target.value.replace(/\D/g, "");
+                        setFormData((prev) => ({
+                          ...prev,
+                          address: { ...prev.address, zipCode: pincode }
+                        }));
+                        if (pincode.length === 6) fetchAddressFromPincode(pincode);
+                      }} />
+                    <input type="tel" placeholder="Phone Number" required className="border p-2 rounded"
+                      value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-lg shadow p-6">
@@ -370,7 +464,7 @@ const fetchAddressFromPincode = async (pincode) => {
             </div>
             
             <button type="submit" disabled={loading}
-              style={{ width: '100%', marginTop: '1rem', backgroundColor: '#4A0E2E', color: 'white', padding: '12px', borderRadius: '8px', fontWeight: '600', border: 'none', cursor: loading ? 'not-allowed' : 'pointer' }}>
+              className="w-full mt-4 bg-maroon text-white py-3 rounded-lg font-semibold hover:bg-maroon-light transition disabled:bg-gray-400">
               {loading ? 'Processing...' : `Place Order (₹${grandTotal.toFixed(2)})`}
             </button>
           </form>
@@ -382,18 +476,11 @@ const fetchAddressFromPincode = async (pincode) => {
             
             <div className="mb-4">
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Coupon Code"
-                  value={couponCode}
+                <input type="text" placeholder="Coupon Code" value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-lg p-2 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={applyCoupon}
-                  className="bg-[#4A0E2E] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#6B1D45]"
-                >
+                  className="flex-1 border border-gray-300 rounded-lg p-2 text-sm" />
+                <button type="button" onClick={applyCoupon}
+                  className="bg-maroon text-white px-4 py-2 rounded-lg text-sm hover:bg-maroon-light">
                   Apply
                 </button>
               </div>
@@ -408,7 +495,7 @@ const fetchAddressFromPincode = async (pincode) => {
               {cartItems.map((item, index) => (
                 <div key={item.id || index} className="flex justify-between text-sm">
                   <span>{item.name} x {item.quantity}</span>
-                  <span>₹{((item.price * item.quantity) ).toFixed(2)}</span>
+                  <span>₹{((item.price * item.quantity) / 100).toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -421,7 +508,7 @@ const fetchAddressFromPincode = async (pincode) => {
               <div className="flex justify-between"><span>Tax (18% GST)</span><span>₹{taxAmount.toFixed(2)}</span></div>
               <div className="flex justify-between"><span>Shipping</span><span>{shippingAmount === 0 ? 'Free' : `₹${shippingAmount}`}</span></div>
               <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                <span>Total</span><span className="text-[#4A0E2E]">₹{grandTotal.toFixed(2)}</span>
+                <span>Total</span><span className="text-maroon">₹{grandTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>

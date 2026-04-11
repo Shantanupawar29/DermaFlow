@@ -1,165 +1,367 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import axios from "axios";
-import { useCart } from "../context/CartContext";
-import { formatPrice, getRupees, toPaise } from "../utils/price";
+import { useEffect, useState } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { Heart, ShoppingBag, Star, Check, Shield, ChevronDown, ChevronUp, ThumbsUp, AlertTriangle, Package } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api';
+const API = 'http://localhost:5000/api';
+const M   = '#4A0E2E';
+const tok = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 
-const badge = (text, color) => (
-  <span style={{ display: "inline-block", background: color, color: "#fff", fontSize: "0.7rem", fontWeight: "600", padding: "0.2rem 0.6rem", borderRadius: "999px", marginRight: "0.4rem", marginBottom: "0.4rem" }}>
-    {text}
-  </span>
-);
+function StarRating({ value, onChange, size=18, readonly=false }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div style={{ display:'flex', gap:3 }}>
+      {[1,2,3,4,5].map(n => (
+        <Star key={n} size={size}
+          fill={(readonly ? value : (hover||value)) >= n ? '#f59e0b' : 'none'}
+          color={(readonly ? value : (hover||value)) >= n ? '#f59e0b' : '#d1d5db'}
+          style={{ cursor: readonly ? 'default' : 'pointer' }}
+          onClick={() => !readonly && onChange?.(n)}
+          onMouseEnter={() => !readonly && setHover(n)}
+          onMouseLeave={() => !readonly && setHover(0)} />
+      ))}
+    </div>
+  );
+}
+
+function RatingBar({ label, count, total }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:5 }}>
+      <span style={{ fontSize:11, color:'#6b7280', width:14, textAlign:'right', flexShrink:0 }}>{label}</span>
+      <div style={{ flex:1, background:'#f3f4f6', borderRadius:999, height:6, overflow:'hidden' }}>
+        <div style={{ height:6, background:'#f59e0b', width:`${pct}%`, borderRadius:999 }}/>
+      </div>
+      <span style={{ fontSize:11, color:'#9ca3af', width:26, flexShrink:0 }}>{count}</span>
+    </div>
+  );
+}
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [isSubscription, setIsSubscription] = useState(false);
-  const [added, setAdded] = useState(false);
+  const [params] = useSearchParams();
   const { addToCart } = useCart();
+  const { user } = useAuth();
+
+  const [product, setProduct]       = useState(null);
+  const [reviews, setReviews]       = useState([]);
+  const [reviewStats, setStats]     = useState({});
+  const [loading, setLoading]       = useState(true);
+  const [wishlisted, setWishlisted] = useState(false);
+  const [added, setAdded]           = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(params.get('review') === '1');
+  const [reviewSort, setReviewSort] = useState('newest');
+  const [reviewPage, setReviewPage] = useState(1);
+  const [totalReviews, setTotal]    = useState(0);
+  const [newReview, setNewReview]   = useState({ rating:5, title:'', comment:'' });
+  const [submitting, setSubmitting] = useState(false);
+  const [expandedIngredients, setExpandedIng] = useState(false);
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetch = async () => {
       try {
-        const response = await axios.get(`${API_URL}/products/${id}`);
-        setProduct(response.data);
-      } catch (err) {
-        setError("Product not found.");
-      } finally {
-        setLoading(false);
-      }
+        const [pRes, rRes] = await Promise.all([
+          axios.get(`${API}/products/${id}`),
+          axios.get(`${API}/reviews/product/${id}?sort=${reviewSort}&page=${reviewPage}`),
+        ]);
+        setProduct(pRes.data);
+        setReviews(rRes.data.reviews || []);
+        setStats(rRes.data.stats || {});
+        setTotal(rRes.data.total || 0);
+      } catch(e) { console.error(e); }
+      setLoading(false);
     };
-    fetchProduct();
-  }, [id]);
+    fetch();
+  }, [id, reviewSort, reviewPage]);
+
+  useEffect(() => {
+    if (user) {
+      axios.get(`${API}/auth/me`, tok()).then(r => {
+        setWishlisted((r.data.wishlist || []).some(p => (p._id || p) === id));
+      }).catch(() => {});
+    }
+  }, [id, user]);
+
+  const toggleWishlist = async () => {
+    if (!user) { alert('Please login to add to wishlist'); return; }
+    try {
+      const r = await axios.post(`${API}/auth/wishlist/${id}`, {}, tok());
+      setWishlisted(r.data.wishlisted);
+    } catch(e) { alert('Failed'); }
+  };
 
   const handleAddToCart = () => {
-    addToCart(product, isSubscription);
+    addToCart(product);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
 
-  if (loading) return <div style={{ padding: "4rem", textAlign: "center", color: "#6b7280" }}>Loading...</div>;
-  if (error || !product) return (
-    <div style={{ padding: "4rem", textAlign: "center" }}>
-      <p style={{ color: "#ef4444", marginBottom: "1rem" }}>{error || "Product not found."}</p>
-      <Link to="/products" style={{ color: "#7B2D3C" }}>← Back to Products</Link>
-    </div>
-  );
+  const submitReview = async () => {
+    if (!user) { alert('Please login to review'); return; }
+    if (!newReview.comment.trim()) { alert('Please write a review comment'); return; }
+    setSubmitting(true);
+    try {
+      await axios.post(`${API}/reviews`, { productId: id, ...newReview }, tok());
+      setShowReviewForm(false);
+      setNewReview({ rating:5, title:'', comment:'' });
+      // Refetch reviews
+      const r = await axios.get(`${API}/reviews/product/${id}?sort=${reviewSort}`);
+      setReviews(r.data.reviews || []);
+      setStats(r.data.stats || {});
+      setTotal(r.data.total || 0);
+      alert('Review submitted! +25 Glow Points added to your account.');
+    } catch(e) { alert(e.response?.data?.message || 'Failed to submit review'); }
+    setSubmitting(false);
+  };
 
-  // Price is in paise from backend
-  const originalPrice = product.price;
-  const subscriptionPrice = originalPrice * 0.9;
-  const displayPrice = isSubscription ? subscriptionPrice : originalPrice;
+  if (loading) return <div style={{ padding:'4rem', textAlign:'center', color:'#6b7280' }}>Loading...</div>;
+  if (!product) return <div style={{ padding:'4rem', textAlign:'center' }}><Link to="/products" style={{ color:M }}>← Back</Link></div>;
+
   const inStock = product.stockQuantity > 0;
+  const discountedPrice = product.discountPercentage > 0
+    ? Math.round(product.price * (1 - product.discountPercentage / 100))
+    : product.price;
+
+  // Batch quality indicator
+  const hasBatchConcern = reviews.some(r => r.batchConcern || !r.isAuthentic);
+  const hasQualityAlerts = reviews.filter(r => r.hasQualityAlert).length >= 2;
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto", padding: "2.5rem 1rem" }}>
-      <Link to="/products" style={{ color: "#7B2D3C", textDecoration: "none", fontSize: "0.875rem", display: "inline-block", marginBottom: "1.5rem" }}>
+    <div style={{ maxWidth:1100, margin:'0 auto', padding:'2.5rem 1rem', fontFamily:'system-ui,sans-serif' }}>
+      <Link to="/products" style={{ color:M, textDecoration:'none', fontSize:13, display:'inline-flex', alignItems:'center', gap:4, marginBottom:20 }}>
         ← Back to Products
       </Link>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3rem", alignItems: "start" }}>
+      {/* Alerts */}
+      {(hasBatchConcern || hasQualityAlerts) && (
+        <div style={{ background:'#fff7ed', border:'1px solid #fed7aa', borderRadius:12, padding:'12px 16px', marginBottom:20, display:'flex', gap:10, alignItems:'flex-start' }}>
+          <AlertTriangle size={16} color="#d97706" style={{ flexShrink:0, marginTop:2 }}/>
+          <div style={{ fontSize:12, color:'#92400e', lineHeight:1.6 }}>
+            <strong>Quality Notice:</strong> Some recent customers have reported concerns about this product.
+            {hasBatchConcern && ' Some reviews mention it feels different from previous purchases.'} Our team is reviewing this feedback.
+          </div>
+        </div>
+      )}
+
+      {/* Product info */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'3rem', alignItems:'start', marginBottom:48 }}>
         {/* Image */}
-        <div>
+        <div style={{ position:'relative' }}>
           {product.images?.[0] ? (
-            <img src={product.images[0]} alt={product.name} style={{ width: "100%", borderRadius: "1rem", objectFit: "cover", aspectRatio: "1/1" }} />
+            <img src={product.images[0]} alt={product.name} style={{ width:'100%', borderRadius:16, objectFit:'cover', aspectRatio:'1/1', boxShadow:'0 4px 24px rgba(0,0,0,0.08)' }}/>
           ) : (
-            <div style={{ background: "#F5E8EA", borderRadius: "1rem", aspectRatio: "1/1", display: "flex", alignItems: "center", justifyContent: "center", color: "#7B2D3C", fontWeight: "600", fontSize: "1.25rem", textAlign: "center", padding: "2rem" }}>
+            <div style={{ background:'#F5E8EA', borderRadius:16, aspectRatio:'1/1', display:'flex', alignItems:'center', justifyContent:'center', color:M, fontWeight:700, fontSize:'1.25rem', textAlign:'center', padding:'2rem' }}>
               {product.name}
+            </div>
+          )}
+          {product.discountPercentage > 0 && (
+            <div style={{ position:'absolute', top:16, left:16, background:'#dc2626', color:'#fff', borderRadius:999, padding:'4px 10px', fontSize:12, fontWeight:800 }}>
+              {product.discountPercentage}% OFF
             </div>
           )}
         </div>
 
-        {/* Info */}
+        {/* Details */}
         <div>
-          <div style={{ marginBottom: "0.5rem" }}>
-            {badge(product.category === "skin" ? "Skincare" : "Haircare", "#0F6E56")}
-            {product.routineTime && badge(product.routineTime === "both" ? "AM & PM" : product.routineTime + " Routine", "#7B2D3C")}
+          {/* Badges */}
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
+            {[
+              { label: product.category === 'skin' ? 'Skincare' : 'Haircare', color:'#0F6E56' },
+              product.routineTime && { label: product.routineTime === 'both' ? 'AM & PM' : product.routineTime + ' Routine', color: M },
+            ].filter(Boolean).map(b => (
+              <span key={b.label} style={{ background:b.color, color:'#fff', fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:999 }}>{b.label}</span>
+            ))}
+            {!inStock && <span style={{ background:'#f3f4f6', color:'#6b7280', fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:999 }}>Out of Stock</span>}
           </div>
 
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: "2rem", fontWeight: "700", color: "#1f2937", marginBottom: "0.75rem" }}>
+          <h1 style={{ fontFamily:'Georgia,serif', fontSize:'1.9rem', fontWeight:700, color:'#1f2937', marginBottom:8, lineHeight:1.2 }}>
             {product.name}
           </h1>
 
-          <p style={{ color: "#6b7280", lineHeight: 1.7, marginBottom: "1.5rem" }}>
-            {product.description}
-          </p>
-
-          {/* Price - Now using formatPrice */}
-          <div style={{ marginBottom: "1.25rem" }}>
-            <div style={{ fontSize: "1.75rem", fontWeight: "700", color: "#7B2D3C" }}>
-              {formatPrice(displayPrice)}
+          {/* Rating summary */}
+          {reviewStats.count > 0 && (
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+              <StarRating value={Math.round(reviewStats.avg || 0)} readonly size={16}/>
+              <span style={{ fontWeight:700, fontSize:14, color:'#1f2937' }}>{(reviewStats.avg || 0).toFixed(1)}</span>
+              <span style={{ color:'#9ca3af', fontSize:12 }}>({reviewStats.count} reviews)</span>
             </div>
-            {isSubscription && (
-              <span style={{ textDecoration: "line-through", color: "#9ca3af", fontSize: "0.875rem" }}>
-                {formatPrice(originalPrice)}
-              </span>
+          )}
+
+          <p style={{ color:'#6b7280', lineHeight:1.8, fontSize:14, marginBottom:20 }}>{product.description}</p>
+
+          {/* Price */}
+          <div style={{ display:'flex', alignItems:'baseline', gap:10, marginBottom:20 }}>
+            <span style={{ fontSize:'2rem', fontWeight:800, color:M }}>₹{discountedPrice.toLocaleString('en-IN')}</span>
+            {product.discountPercentage > 0 && (
+              <span style={{ textDecoration:'line-through', color:'#9ca3af', fontSize:14 }}>₹{product.price.toLocaleString('en-IN')}</span>
             )}
           </div>
 
-          {/* Subscription toggle */}
-          {product.subscriptionAvailable && (
-            <div style={{ background: "#E1F5EE", border: "1px solid #0F6E56", borderRadius: "0.75rem", padding: "0.75rem 1rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}
-              onClick={() => setIsSubscription(!isSubscription)}>
-              <input type="checkbox" checked={isSubscription} onChange={() => {}} style={{ width: 16, height: 16, accentColor: "#0F6E56" }} />
-              <div>
-                <div style={{ fontWeight: "600", fontSize: "0.875rem", color: "#0F6E56" }}>Subscribe & Save 10%</div>
-                <div style={{ fontSize: "0.75rem", color: "#4b5563" }}>Auto-delivery every 30 days. Cancel anytime.</div>
-              </div>
-            </div>
-          )}
-
           {/* Stock */}
-          {!inStock && (
-            <div style={{ color: "#ef4444", fontSize: "0.875rem", marginBottom: "1rem" }}>⚠️ Out of stock</div>
-          )}
-          {inStock && product.stockQuantity <= product.safetyThreshold && (
-            <div style={{ color: "#f59e0b", fontSize: "0.875rem", marginBottom: "1rem" }}>⚡ Only {product.stockQuantity} left!</div>
-          )}
+          <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:16, fontSize:12 }}>
+            <Package size={14} color={inStock ? '#16a34a' : '#dc2626'}/>
+            <span style={{ color: inStock ? '#16a34a' : '#dc2626', fontWeight:600 }}>
+              {inStock ? `In stock (${product.stockQuantity} units)` : 'Out of stock'}
+            </span>
+          </div>
 
-          <button
-            onClick={handleAddToCart}
-            disabled={!inStock}
-            style={{ width: "100%", background: inStock ? (added ? "#0F6E56" : "#7B2D3C") : "#d1d5db", color: "#fff", padding: "0.875rem", borderRadius: "0.75rem", fontWeight: "600", border: "none", cursor: inStock ? "pointer" : "not-allowed", fontSize: "1rem", transition: "background 0.2s" }}
-          >
-            {added ? "✓ Added to Cart!" : inStock ? "Add to Cart" : "Out of Stock"}
-          </button>
+          {/* Actions */}
+          <div style={{ display:'flex', gap:12, marginBottom:24 }}>
+            <button onClick={handleAddToCart} disabled={!inStock} style={{ flex:1, background:inStock ? M : '#d1d5db', color:'#fff', border:'none', borderRadius:10, padding:'14px', fontWeight:700, cursor:inStock?'pointer':'not-allowed', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+              {added ? <><Check size={16}/> Added!</> : <><ShoppingBag size={16}/> {inStock ? 'Add to Cart' : 'Out of Stock'}</>}
+            </button>
+            <button onClick={toggleWishlist} style={{ width:50, height:50, background: wishlisted ? '#fef2f2' : '#f3f4f6', border:`1.5px solid ${wishlisted ? '#fca5a5' : '#e5e7eb'}`, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+              <Heart size={18} fill={wishlisted ? '#dc2626' : 'none'} color={wishlisted ? '#dc2626' : '#9ca3af'}/>
+            </button>
+          </div>
 
           {/* Ingredients */}
-          {product.ingredients && product.ingredients.length > 0 && (
-            <div style={{ marginTop: "2rem" }}>
-              <h3 style={{ fontWeight: "600", fontSize: "0.875rem", color: "#374151", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Key Ingredients
-              </h3>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                {product.ingredients.map((ing) => (
-                  <span key={ing} style={{ background: "#f3f4f6", borderRadius: "999px", padding: "0.25rem 0.75rem", fontSize: "0.8rem", color: "#374151" }}>
-                    {ing}
-                  </span>
-                ))}
-              </div>
+          {product.ingredients?.length > 0 && (
+            <div style={{ background:'#f9fafb', borderRadius:10, padding:'14px 16px', marginBottom:14 }}>
+              <button onClick={()=>setExpandedIng(v=>!v)} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%', background:'none', border:'none', cursor:'pointer', padding:0 }}>
+                <span style={{ fontWeight:700, fontSize:13, color:'#1f2937' }}>Key Ingredients</span>
+                {expandedIngredients ? <ChevronUp size={16} color="#6b7280"/> : <ChevronDown size={16} color="#6b7280"/>}
+              </button>
+              {expandedIngredients && (
+                <div style={{ marginTop:10, display:'flex', flexWrap:'wrap', gap:5 }}>
+                  {product.ingredients.map(ing => (
+                    <span key={ing} style={{ background:'#e0e7ff', color:'#4338ca', fontSize:11, fontWeight:600, padding:'3px 9px', borderRadius:999 }}>{ing}</span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {/* Concerns */}
-          {product.concerns && product.concerns.length > 0 && (
-            <div style={{ marginTop: "1.25rem" }}>
-              <h3 style={{ fontWeight: "600", fontSize: "0.875rem", color: "#374151", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Targets
-              </h3>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                {product.concerns.map((c) => (
-                  <span key={c} style={{ background: "#F5E8EA", borderRadius: "999px", padding: "0.25rem 0.75rem", fontSize: "0.8rem", color: "#7B2D3C" }}>
-                    {c}
-                  </span>
-                ))}
-              </div>
+          {product.concerns?.length > 0 && (
+            <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+              {product.concerns.map(c => (
+                <span key={c} style={{ background:'#f0fdf4', color:'#15803d', border:'1px solid #86efac', fontSize:11, fontWeight:600, padding:'3px 8px', borderRadius:999 }}>{c}</span>
+              ))}
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── REVIEWS SECTION ── */}
+      <div style={{ borderTop:'1px solid #f0f0f0', paddingTop:32 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexWrap:'wrap', gap:12 }}>
+          <h2 style={{ fontWeight:800, fontSize:18, color:'#1f2937', margin:0 }}>Customer Reviews</h2>
+          <div style={{ display:'flex', gap:10 }}>
+            <select value={reviewSort} onChange={e=>setReviewSort(e.target.value)} style={{ border:'1px solid #e5e7eb', borderRadius:8, padding:'6px 12px', fontSize:12, fontWeight:600, cursor:'pointer', outline:'none' }}>
+              <option value="newest">Newest First</option>
+              <option value="helpful">Most Helpful</option>
+              <option value="highest">Highest Rated</option>
+              <option value="lowest">Lowest Rated</option>
+            </select>
+            {user && (
+              <button onClick={()=>setShowReviewForm(v=>!v)} style={{ display:'flex', alignItems:'center', gap:6, background:M, color:'#fff', border:'none', borderRadius:8, padding:'7px 16px', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                <Star size={13}/> Write a Review
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Rating overview */}
+        {reviewStats.count > 0 && (
+          <div style={{ display:'flex', gap:32, background:'#f9fafb', borderRadius:14, padding:'20px 24px', marginBottom:24, flexWrap:'wrap' }}>
+            <div style={{ textAlign:'center' }}>
+              <div style={{ fontSize:42, fontWeight:900, color:'#1f2937', lineHeight:1 }}>{(reviewStats.avg||0).toFixed(1)}</div>
+              <StarRating value={Math.round(reviewStats.avg||0)} readonly size={20}/>
+              <div style={{ fontSize:12, color:'#9ca3af', marginTop:4 }}>{reviewStats.count} reviews</div>
+            </div>
+            <div style={{ flex:1, minWidth:200 }}>
+              {[5,4,3,2,1].map(n => (
+                <RatingBar key={n} label={n} count={reviewStats[`r${n}`]||0} total={reviewStats.count||1}/>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Review form */}
+        {showReviewForm && (
+          <div style={{ background:'#fff', border:`1.5px solid ${M}30`, borderRadius:14, padding:24, marginBottom:24 }}>
+            <h3 style={{ fontWeight:700, fontSize:15, marginBottom:16, color:M }}>Write Your Review — Earn 25 Glow Points</h3>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:'#374151', display:'block', marginBottom:8 }}>Your Rating *</label>
+              <StarRating value={newReview.rating} onChange={r=>setNewReview(p=>({...p,rating:r}))} size={28}/>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:'#374151', display:'block', marginBottom:6 }}>Title (optional)</label>
+              <input value={newReview.title} onChange={e=>setNewReview(p=>({...p,title:e.target.value}))} placeholder="Summarize your experience" style={{ width:'100%', border:'1px solid #e5e7eb', borderRadius:8, padding:'9px 12px', fontSize:13, boxSizing:'border-box', outline:'none' }}/>
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:'#374151', display:'block', marginBottom:6 }}>Your Review *</label>
+              <textarea value={newReview.comment} onChange={e=>setNewReview(p=>({...p,comment:e.target.value}))} rows={4} placeholder="How did it work for your skin? What did you like or dislike?" style={{ width:'100%', border:'1px solid #e5e7eb', borderRadius:8, padding:'9px 12px', fontSize:13, boxSizing:'border-box', outline:'none', resize:'vertical' }}/>
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={submitReview} disabled={submitting} style={{ flex:1, background:M, color:'#fff', border:'none', borderRadius:8, padding:'10px', fontWeight:700, cursor:'pointer', fontSize:13 }}>
+                {submitting ? 'Submitting...' : 'Submit Review (+25 Glow Points)'}
+              </button>
+              <button onClick={()=>setShowReviewForm(false)} style={{ background:'#f3f4f6', border:'none', borderRadius:8, padding:'10px 16px', cursor:'pointer', fontSize:13, color:'#6b7280' }}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* Review cards */}
+        {reviews.length === 0 ? (
+          <div style={{ textAlign:'center', padding:'40px', background:'#f9fafb', borderRadius:14, color:'#9ca3af' }}>
+            <Star size={32} color="#e5e7eb" style={{ margin:'0 auto 10px', display:'block' }}/>
+            <p style={{ fontSize:13 }}>No reviews yet. Be the first to review this product!</p>
+          </div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            {reviews.map(rev => (
+              <div key={rev._id} style={{ background:'#fff', border:'1px solid #f0f0f0', borderRadius:14, padding:'18px 20px', boxShadow:'0 1px 4px rgba(0,0,0,0.04)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:8, marginBottom:8 }}>
+                  <div>
+                    <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
+                      <span style={{ fontWeight:700, fontSize:13 }}>{rev.name}</span>
+                      {rev.verifiedPurchase && (
+                        <span style={{ background:'#f0fdf4', color:'#15803d', fontSize:10, fontWeight:700, padding:'1px 7px', borderRadius:999, display:'flex', alignItems:'center', gap:3 }}>
+                          <Check size={9}/> Verified Purchase
+                        </span>
+                      )}
+                    </div>
+                    <StarRating value={rev.rating} readonly size={14}/>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:11, color:'#9ca3af' }}>{new Date(rev.createdAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}</div>
+                  </div>
+                </div>
+                {rev.title && <div style={{ fontWeight:600, fontSize:13, marginBottom:6, color:'#1f2937' }}>{rev.title}</div>}
+                <p style={{ fontSize:13, color:'#4b5563', lineHeight:1.7, margin:'0 0 10px' }}>{rev.comment}</p>
+                {rev.adminReply && (
+                  <div style={{ background:'#f9fafb', borderRadius:8, padding:'10px 14px', borderLeft:`3px solid ${M}`, marginBottom:10 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:M, marginBottom:4 }}>Response from DermaFlow</div>
+                    <div style={{ fontSize:12, color:'#4b5563', lineHeight:1.6 }}>{rev.adminReply}</div>
+                  </div>
+                )}
+                {/* Quality flags (only show if severe) */}
+                {rev.hasQualityAlert && (
+                  <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'#d97706' }}>
+                    <AlertTriangle size={12}/> Quality concern flagged — under review
+                  </div>
+                )}
+                <div style={{ display:'flex', justify:'flex-end', marginTop:8 }}>
+                  <button onClick={async()=>{ await axios.post(`${API}/reviews/${rev._id}/helpful`,{},tok()); }} style={{ display:'flex', alignItems:'center', gap:5, background:'none', border:'1px solid #e5e7eb', borderRadius:6, padding:'4px 10px', cursor:'pointer', fontSize:11, color:'#6b7280' }}>
+                    <ThumbsUp size={12}/> Helpful ({rev.helpful||0})
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* Pagination */}
+            {totalReviews > 10 && (
+              <div style={{ display:'flex', justifyContent:'center', gap:8, marginTop:8 }}>
+                <button onClick={()=>setReviewPage(p=>Math.max(1,p-1))} disabled={reviewPage===1} style={{ background:'#f3f4f6', border:'none', borderRadius:7, padding:'7px 14px', cursor:'pointer', fontSize:12, fontWeight:600 }}>Previous</button>
+                <button onClick={()=>setReviewPage(p=>p+1)} disabled={reviews.length < 10} style={{ background:M, color:'#fff', border:'none', borderRadius:7, padding:'7px 14px', cursor:'pointer', fontSize:12, fontWeight:600 }}>Next</button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,14 +1,82 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Star } from 'lucide-react';
+import { ShoppingCart, Star, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../utils/price';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
+  const { isAuthenticated } = useAuth();
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      checkWishlistStatus();
+    }
+  }, [product._id, isAuthenticated]);
+
+  const checkWishlistStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/profile/wishlist`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const wishlist = response.data;
+      setIsWishlisted(wishlist.some(item => item._id === product._id));
+    } catch (error) {
+      console.error('Error checking wishlist:', error);
+    }
+  };
+
+  const toggleWishlist = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      alert('Please login to add items to wishlist');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (isWishlisted) {
+        await axios.delete(`${API_URL}/profile/wishlist/${product._id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setIsWishlisted(false);
+      } else {
+        await axios.post(`${API_URL}/profile/wishlist/${product._id}`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setIsWishlisted(true);
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
+    <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group relative">
+      {/* Wishlist Button */}
+      <button
+        onClick={toggleWishlist}
+        disabled={loading}
+        className="absolute top-2 right-2 z-10 bg-white/80 backdrop-blur-sm p-1.5 rounded-full hover:bg-white transition"
+      >
+        <Heart 
+          size={18} 
+          className={isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-red-500'}
+        />
+      </button>
+      
       <Link to={`/product/${product._id || product.id}`}>
         <div className="relative overflow-hidden">
           <img 
@@ -17,7 +85,7 @@ const ProductCard = ({ product }) => {
             className="w-full h-64 object-cover group-hover:scale-105 transition duration-300"
           />
           {product.discountPercentage > 0 && (
-            <div className="absolute top-2 right-2 bg-maroon text-white px-2 py-1 rounded text-xs font-semibold">
+            <div className="absolute top-2 left-2 bg-maroon text-white px-2 py-1 rounded text-xs font-semibold">
               {product.discountPercentage}% OFF
             </div>
           )}
@@ -25,7 +93,7 @@ const ProductCard = ({ product }) => {
       </Link>
       <div className="p-4">
         <Link to={`/product/${product._id || product.id}`}>
-          <h3 className="font-semibold text-lg text-gray-800 hover:text-maroon transition">
+          <h3 className="font-semibold text-lg text-gray-800 hover:text-maroon transition line-clamp-1">
             {product.name}
           </h3>
         </Link>
@@ -38,7 +106,7 @@ const ProductCard = ({ product }) => {
               <Star 
                 key={i} 
                 size={14} 
-                className={`${i < (product.rating || 4.5) ? 'text-gold fill-current' : 'text-gray-300'}`}
+                className={`${i < (product.rating || 4.5) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
               />
             ))}
           </div>

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('../models/Product'); // Import the model, not define it
+const Product = require('../models/Product');
 const { protect, admin } = require('../middleware/auth');
 
 // Get all products with filters
@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get single product
+// ✅ Get single PRODUCT by ID
 router.get('/:id', async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);

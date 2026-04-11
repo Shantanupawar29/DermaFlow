@@ -14,7 +14,47 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ ADD GLOBAL ERROR HANDLER AFTER ALL ROUTES (at the bottom of index.js, before mongoose.connect)
+// ✅ ROUTES IMPORT
+const productRoutes    = require('./routes/products');
+const authRoutes       = require('./routes/auth');
+const orderRoutes      = require('./routes/orders');
+const adminRoutes      = require('./routes/admin');
+const inventoryRoutes  = require('./routes/inventory');
+const customerRoutes   = require('./routes/customers');
+const analyticsRoutes  = require('./routes/analytics');
+const paymentRoutes    = require('./routes/payment');
+const scmRoutes        = require('./routes/scm');
+const sellerAuthRoutes = require('./routes/sellerAuth');
+const reviewRoutes     = require('./routes/reviews');
+const quizRoutes = require('./routes/quiz');
+const pincodeRoutes = require('./routes/pincode');
+const profileRoutes = require('./routes/profile');
+
+// ✅ ROUTES REGISTRATION
+app.use('/api/quiz', quizRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/pincode', pincodeRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/scm', scmRoutes);
+app.use('/api/seller/auth', sellerAuthRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/erp', require('./routes/erp'));
+app.use('/api/crm', require('./routes/crm'));  
+app.get('/', (req, res) => res.json({ message: 'Derma Flow API is running' }));
+
+// ✅ 404 HANDLER - for routes that don't exist
+app.use((req, res) => {
+  res.status(404).json({ message: `Route ${req.url} not found` });
+});
+
+// ✅ GLOBAL ERROR HANDLER - MUST BE AFTER ALL ROUTES (MOVED HERE)
 app.use((err, req, res, next) => {
   console.error('❌ Global error handler caught:', err);
   console.error('Stack:', err.stack);
@@ -23,39 +63,6 @@ app.use((err, req, res, next) => {
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
-// ✅ ROUTES IMPORT
-const productRoutes    = require('./routes/products');
-const authRoutes       = require('./routes/auth');
-const orderRoutes      = require('./routes/orders');
-const adminRoutes      = require('./routes/admin'); // NLP aur Logs iske andar hain
-const inventoryRoutes  = require('./routes/inventory');
-const customerRoutes   = require('./routes/customers');
-const analyticsRoutes  = require('./routes/analytics');
-const paymentRoutes    = require('./routes/payment');
-const scmRoutes        = require('./routes/scm');
-const sellerAuthRoutes = require('./routes/sellerAuth');
-const reviewRoutes     = require('./routes/reviews'); // New Feature
-const quizRoutes = require('./routes/quiz');
-const pincodeRoutes = require('./routes/pincode');
-
-
-// ✅ ROUTES REGISTRATION
-app.use('/api/quiz', quizRoutes);
-app.use('/api/pincode', pincodeRoutes);
-app.use('/api/reviews',   reviewRoutes);    // Customer Reviews & Feedback
-app.use('/api/admin',     adminRoutes);     // Security SOC, Audit Logs, Sentiment
-app.use('/api/scm',       scmRoutes);       // Supply Chain Management
-app.use('/api/seller/auth', sellerAuthRoutes);
-app.use('/api/products',  productRoutes);
-app.use('/api/auth',      authRoutes);
-app.use('/api/orders',    orderRoutes);
-app.use('/api/inventory', inventoryRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/payment',   paymentRoutes);
-app.use('/api/erp',       require('./routes/erp'));       // ERP: Batch, BOM, COGS, Quarantine
-app.use('/api/crm',       require('./routes/crm'));  
-app.get('/', (req, res) => res.json({ message: 'Derma Flow API is running' }));
 
 // ✅ DB CONNECTION & SERVER START
 mongoose.connect(process.env.MONGO_URI)

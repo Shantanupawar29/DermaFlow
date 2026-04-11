@@ -94,7 +94,9 @@ router.post('/', protect, async (req, res) => {
 // Get user orders
 router.get('/my-orders', protect, async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.user._id }).sort('-orderDate');
+   const orders = await Order.find({ user: req.user._id })
+  .populate('items.product')
+  .sort('-orderDate');
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -104,7 +106,8 @@ router.get('/my-orders', protect, async (req, res) => {
 // Get single order
 router.get('/:id', protect, async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id)
+  .populate('items.product');
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
@@ -124,10 +127,14 @@ router.put('/:id/status', protect, admin, async (req, res) => {
   try {
     const { status } = req.body;
     const order = await Order.findByIdAndUpdate(
+  
       req.params.id,
       { status },
       { new: true }
     );
+        if (!order) {
+  return res.status(404).json({ message: 'Order not found' });
+}
 
     // Audit log inside the route handler (correct placement)
     await AuditLog.log({

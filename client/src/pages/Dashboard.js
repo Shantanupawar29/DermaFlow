@@ -8,7 +8,8 @@ import {
   Plus, Edit2, Trash2, LogOut, Sparkles, Gift,
   ChevronRight, Calendar, Award, Copy, X, Home,
   Phone, Mail, Map, RefreshCw, TrendingUp, LayoutDashboard,
-  History, Wallet, Bell, Shield, HelpCircle, Sun, Moon, CreditCard
+  History, Wallet, Bell, Shield, HelpCircle, Sun, Moon, CreditCard,
+  Info
 } from 'lucide-react';
 
 import axios from 'axios';
@@ -59,10 +60,7 @@ export default function Dashboard() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [savedCards, setSavedCards] = useState([]);
 
-  useEffect(() => {
-    if (user) fetchDashboardData();
-  }, [user]);
-
+  // Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
       const [userRes, ordersRes, wishlistRes, addressesRes, statsRes, routineRes] = await Promise.all([
@@ -71,8 +69,7 @@ export default function Dashboard() {
         axios.get(`${API_URL}/profile/wishlist`, { headers: { Authorization: `Bearer ${token()}` } }),
         axios.get(`${API_URL}/profile/addresses`, { headers: { Authorization: `Bearer ${token()}` } }),
         axios.get(`${API_URL}/profile/stats`, { headers: { Authorization: `Bearer ${token()}` } }),
-        axios.get(`${API_URL}/quiz/routine`, { headers: { Authorization: `Bearer ${token()}` } }),
-        axios.get(`${API_URL}/profile/cards`, { headers: { Authorization: `Bearer ${token()}` } })
+        axios.get(`${API_URL}/quiz/routine`, { headers: { Authorization: `Bearer ${token()}` } })
       ]);
       
       setUserData(userRes.data);
@@ -88,6 +85,41 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  // Handle authentication and loading after all hooks
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading your dashboard...</div>;
+  }
+
+  const cu = userData || user;
+  const spent = stats.totalSpent || 0;
+  const currentTier = Object.values(TIERS).find(t => spent >= t.min && spent <= t.max) || TIERS.bronze;
+  const nextTier = Object.values(TIERS).find(t => t.min > spent);
+  const progressToNext = nextTier ? ((spent - currentTier.min) / (nextTier.min - currentTier.min)) * 100 : 100;
+  const points = cu.glowPoints || 0;
+
+  const menuItems = [
+    { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'routine', label: 'My Routine', icon: Sun, badge: 0 },
+    { id: 'orders', label: 'Orders', icon: Package, badge: orders.length },
+    { id: 'track', label: 'Track Order', icon: Truck },
+    { id: 'wishlist', label: 'Wishlist', icon: Heart, badge: wishlist.length },
+    { id: 'addresses', label: 'Addresses', icon: MapPin, badge: addresses.length },
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'rewards', label: 'Rewards', icon: Award },
+    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'cards', label: 'Saved Cards', icon: CreditCard, badge: userData?.savedCards?.length || 0 },
+  ];
 
   const handleAddToCart = (product) => {
     addToCart(product, 1);
@@ -179,33 +211,54 @@ export default function Dashboard() {
     }
   };
 
-  if (!isAuthenticated || !user) return <Navigate to="/login" />;
-  if (loading) return <div className="flex justify-center items-center h-64">Loading your dashboard...</div>;
+  const handleQuickTrack = () => {
+    const orderNum = document.getElementById('quickTrackInput')?.value;
+    if (orderNum) {
+      window.location.href = `/track?order=${orderNum}`;
+    }
+  };
 
-  const cu = userData || user;
-  const spent = stats.totalSpent || 0;
-  const currentTier = Object.values(TIERS).find(t => spent >= t.min && spent <= t.max) || TIERS.bronze;
-  const nextTier = Object.values(TIERS).find(t => t.min > spent);
-  const progressToNext = nextTier ? ((spent - currentTier.min) / (nextTier.min - currentTier.min)) * 100 : 100;
-  const points = cu.glowPoints || 0;
-
-  const menuItems = [
-    { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'routine', label: 'My Routine', icon: Sun, badge: 0 },
-    { id: 'orders', label: 'Orders', icon: Package, badge: orders.length },
-    { id: 'wishlist', label: 'Wishlist', icon: Heart, badge: wishlist.length },
-    { id: 'addresses', label: 'Addresses', icon: MapPin, badge: addresses.length },
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'rewards', label: 'Rewards', icon: Award },
-    { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'cards', label: 'Saved Cards', icon: CreditCard, badge: userData?.savedCards?.length || 0 },
-  ];
+  const handleTrackSearch = () => {
+    const trackInput = document.getElementById('trackOrderNumber');
+    const orderNumber = trackInput?.value;
+    if (!orderNumber) {
+      alert('Please enter an order number');
+      return;
+    }
+    
+    const foundOrder = orders.find(o => 
+      o.orderNumber?.toLowerCase().includes(orderNumber.toLowerCase()) ||
+      o._id.includes(orderNumber)
+    );
+    
+    const resultDiv = document.getElementById('trackResult');
+    if (foundOrder) {
+      resultDiv.innerHTML = `
+        <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+          <p class="font-semibold text-green-800">Order Found!</p>
+          <p class="text-sm text-gray-600 mt-1">Order #${foundOrder.orderNumber}</p>
+          <p class="text-sm mt-2">Status: <span class="font-semibold">${ORDER_STATUS[foundOrder.status]?.label}</span></p>
+          <button onclick="window.location.href='/track?order=${foundOrder.orderNumber}'" 
+            class="mt-3 bg-maroon text-white px-4 py-1 rounded text-sm">
+            View Full Tracking
+          </button>
+        </div>
+      `;
+    } else {
+      resultDiv.innerHTML = `
+        <div class="p-4 bg-red-50 rounded-lg border border-red-200">
+          <p class="font-semibold text-red-800">Order Not Found</p>
+          <p class="text-sm text-gray-600 mt-1">Please check your order number and try again</p>
+          <a href="/track" class="inline-block mt-3 text-maroon text-sm">Go to Track Page →</a>
+        </div>
+      `;
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
       <aside className="w-72 bg-white shadow-lg fixed h-full overflow-y-auto">
-        {/* User Info */}
         <div className="p-6 border-b">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 bg-maroon/10 rounded-full flex items-center justify-center">
@@ -230,7 +283,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Navigation Menu */}
         <nav className="p-4">
           {menuItems.map(item => (
             <button
@@ -271,12 +323,43 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="flex-1 ml-72 min-h-screen">
         <div className="p-8 pb-16">
+          
+          {/* Quick Track Card - Dashboard Overview */}
+          {activeSection === 'overview' && (
+            <div className="bg-gradient-to-r from-maroon to-maroon/80 rounded-xl p-5 text-white mb-8">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <Truck size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Track Your Order</h3>
+                    <p className="text-sm text-white/80">Enter your order number to track delivery status</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <input 
+                    type="text" 
+                    placeholder="Order number"
+                    className="px-4 py-2 rounded-lg text-gray-800 text-sm w-48"
+                    id="quickTrackInput"
+                  />
+                  <button 
+                    onClick={handleQuickTrack}
+                    className="bg-white text-maroon px-5 py-2 rounded-lg font-medium text-sm hover:bg-gray-100 transition"
+                  >
+                    Track
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Dashboard Overview */}
           {activeSection === 'overview' && (
-            <div>
+            <>
               <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard Overview</h1>
               
-              {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                 <div className="bg-white rounded-xl shadow-sm p-5">
                   <div className="flex items-center gap-3">
@@ -324,7 +407,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Loyalty Card */}
               <div className={`${currentTier.bg} rounded-xl p-6 mb-8`}>
                 <div className="flex justify-between items-start flex-wrap gap-4">
                   <div>
@@ -343,7 +425,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Recent Orders */}
               <div className="bg-white rounded-xl shadow-sm p-5">
                 <h3 className="font-semibold text-gray-800 mb-4">Recent Orders</h3>
                 {orders.slice(0, 3).length === 0 ? (
@@ -372,6 +453,81 @@ export default function Dashboard() {
                     ))}
                   </div>
                 )}
+              </div>
+            </>
+          )}
+
+          {/* Track Order Section */}
+          {activeSection === 'track' && (
+            <div className="bg-white rounded-xl shadow-sm p-5">
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">Track Your Order</h1>
+                <Link to="/track" className="bg-maroon text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+                  <Truck size={16} /> Go to Track Page
+                </Link>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="border rounded-lg p-5">
+                  <h3 className="font-semibold text-gray-800 mb-3">Track by Order Number</h3>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      id="trackOrderNumber"
+                      placeholder="Enter order number (e.g., ORD-12345)"
+                      className="flex-1 border rounded-lg p-2 text-sm"
+                    />
+                    <button 
+                      onClick={handleTrackSearch}
+                      className="bg-maroon text-white px-4 py-2 rounded-lg text-sm hover:bg-maroon-light transition"
+                    >
+                      Track
+                    </button>
+                  </div>
+                  <div id="trackResult" className="mt-4"></div>
+                </div>
+
+                <div className="border rounded-lg p-5">
+                  <h3 className="font-semibold text-gray-800 mb-3">Recent Orders</h3>
+                  {orders.slice(0, 3).length === 0 ? (
+                    <p className="text-gray-500 text-sm">No orders to track</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {orders.slice(0, 3).map(order => (
+                        <div 
+                          key={order._id} 
+                          className="flex justify-between items-center p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition"
+                          onClick={() => {
+                            window.location.href = `/track?order=${order.orderNumber}`;
+                          }}
+                        >
+                          <div>
+                            <p className="font-medium text-sm">Order #{order.orderNumber?.slice(-8)}</p>
+                            <p className="text-xs text-gray-500">{new Date(order.orderDate).toLocaleDateString()}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className={`text-xs px-2 py-1 rounded-full ${ORDER_STATUS[order.status]?.bg} ${ORDER_STATUS[order.status]?.color}`}>
+                              {ORDER_STATUS[order.status]?.label}
+                            </span>
+                            <ChevronRight size={16} className="text-gray-400 ml-2 inline" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Info size={16} className="text-blue-600" />
+                  <p className="text-sm font-medium text-blue-800">Need help tracking your order?</p>
+                </div>
+                <p className="text-sm text-blue-700">
+                  You can also track your order by visiting the full 
+                  <Link to="/track" className="font-bold underline mx-1">Track Order Page</Link>
+                  or contact our support team at support@dermaflow.com
+                </p>
               </div>
             </div>
           )}
@@ -402,26 +558,18 @@ export default function Dashboard() {
                       <div className="text-center py-8">
                         <Sun size={40} className="mx-auto text-gray-300 mb-3" />
                         <p className="text-gray-500">No products in your AM routine yet</p>
-                        <Link to="/quiz" className="text-maroon text-sm mt-2 inline-block hover:underline">
-                          Take the Skin Quiz →
-                        </Link>
+                        <Link to="/quiz" className="text-maroon text-sm mt-2 inline-block hover:underline">Take the Skin Quiz →</Link>
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {routine.amRoutine?.map((product, idx) => (
                           <div key={product._id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl hover:shadow-md transition group">
-                            <div className="w-8 h-8 bg-maroon rounded-full flex items-center justify-center text-white font-bold text-sm">
-                              {idx + 1}
-                            </div>
+                            <div className="w-8 h-8 bg-maroon rounded-full flex items-center justify-center text-white font-bold text-sm">{idx + 1}</div>
                             <div className="flex-1">
-                              <Link to={`/product/${product._id}`} className="font-medium text-gray-800 hover:text-maroon transition">
-                                {product.name}
-                              </Link>
+                              <Link to={`/product/${product._id}`} className="font-medium text-gray-800 hover:text-maroon transition">{product.name}</Link>
                               <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{product.description?.substring(0, 80)}</p>
                             </div>
-                            <Link to={`/product/${product._id}`} className="text-maroon text-sm font-medium opacity-0 group-hover:opacity-100 transition">
-                              View →
-                            </Link>
+                            <Link to={`/product/${product._id}`} className="text-maroon text-sm font-medium opacity-0 group-hover:opacity-100 transition">View →</Link>
                           </div>
                         ))}
                       </div>
@@ -448,26 +596,18 @@ export default function Dashboard() {
                       <div className="text-center py-8">
                         <Moon size={40} className="mx-auto text-gray-300 mb-3" />
                         <p className="text-gray-500">No products in your PM routine yet</p>
-                        <Link to="/quiz" className="text-maroon text-sm mt-2 inline-block hover:underline">
-                          Take the Skin Quiz →
-                        </Link>
+                        <Link to="/quiz" className="text-maroon text-sm mt-2 inline-block hover:underline">Take the Skin Quiz →</Link>
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {routine.pmRoutine?.map((product, idx) => (
                           <div key={product._id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl hover:shadow-md transition group">
-                            <div className="w-8 h-8 bg-maroon rounded-full flex items-center justify-center text-white font-bold text-sm">
-                              {idx + 1}
-                            </div>
+                            <div className="w-8 h-8 bg-maroon rounded-full flex items-center justify-center text-white font-bold text-sm">{idx + 1}</div>
                             <div className="flex-1">
-                              <Link to={`/product/${product._id}`} className="font-medium text-gray-800 hover:text-maroon transition">
-                                {product.name}
-                              </Link>
+                              <Link to={`/product/${product._id}`} className="font-medium text-gray-800 hover:text-maroon transition">{product.name}</Link>
                               <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{product.description?.substring(0, 80)}</p>
                             </div>
-                            <Link to={`/product/${product._id}`} className="text-maroon text-sm font-medium opacity-0 group-hover:opacity-100 transition">
-                              View →
-                            </Link>
+                            <Link to={`/product/${product._id}`} className="text-maroon text-sm font-medium opacity-0 group-hover:opacity-100 transition">View →</Link>
                           </div>
                         ))}
                       </div>
@@ -476,16 +616,13 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Skin Profile Summary */}
               {routine.skinType && (
                 <div className="mt-6 bg-white rounded-xl shadow-sm p-5">
                   <h3 className="font-semibold text-gray-800 mb-3">Your Skin Profile</h3>
                   <div className="flex flex-wrap gap-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-500">Skin Type:</span>
-                      <span className="px-2 py-1 bg-maroon/10 text-maroon rounded-full text-xs font-medium capitalize">
-                        {routine.skinType}
-                      </span>
+                      <span className="px-2 py-1 bg-maroon/10 text-maroon rounded-full text-xs font-medium capitalize">{routine.skinType}</span>
                     </div>
                     {routine.concerns?.length > 0 && (
                       <div className="flex items-center gap-2">
@@ -497,9 +634,7 @@ export default function Dashboard() {
                             </span>
                           ))}
                           {routine.concerns.length > 3 && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
-                              +{routine.concerns.length - 3}
-                            </span>
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">+{routine.concerns.length - 3}</span>
                           )}
                         </div>
                       </div>
@@ -564,7 +699,7 @@ export default function Dashboard() {
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {wishlist.map(product => (
                     <div key={product._id} className="border rounded-lg p-3 hover:shadow-md transition">
-                      <img src={product.images?.[0] || '/api/placeholder/120/120'} className="w-full h-32 object-cover rounded mb-3" />
+                      <img src={product.images?.[0] || '/api/placeholder/120/120'} className="w-full h-32 object-cover rounded mb-3" alt={product.name} />
                       <h4 className="font-medium text-gray-800 line-clamp-1">{product.name}</h4>
                       <p className="text-maroon font-bold mt-1">₹{(product.price || 0).toFixed(2)}</p>
                       <div className="flex gap-2 mt-3">
@@ -581,56 +716,7 @@ export default function Dashboard() {
               )}
             </div>
           )}
-{/* Saved Cards Section */}
-{activeSection === 'cards' && (
-  <div className="bg-white rounded-xl shadow-sm p-5">
-    <div className="flex justify-between items-center mb-6">
-      <h1 className="text-2xl font-bold text-gray-800">Saved Cards</h1>
-      <button className="bg-maroon text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
-        <Plus size={16} /> Add New Card
-      </button>
-    </div>
 
-    {!userData?.savedCards || userData.savedCards.length === 0 ? (
-      <div className="text-center py-12">
-        <CreditCard size={48} className="mx-auto text-gray-300 mb-3" />
-        <p className="text-gray-500">No saved cards yet</p>
-        <p className="text-sm text-gray-400 mt-1">Add a card for faster checkout</p>
-      </div>
-    ) : (
-      <div className="grid md:grid-cols-2 gap-4">
-        {userData.savedCards.map((card, idx) => (
-          <div key={idx} className={`border rounded-lg p-4 ${card.isDefault ? 'border-maroon/30 bg-maroon/5' : ''}`}>
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-8 bg-gray-800 rounded flex items-center justify-center text-white text-xs font-bold">
-                  {card.cardType === 'Visa' ? 'VISA' : card.cardType === 'Mastercard' ? 'MC' : '卡'}
-                </div>
-                <div>
-                  <p className="font-medium">•••• •••• •••• {card.last4}</p>
-                  <p className="text-sm text-gray-500">Expires {card.expiryMonth}/{card.expiryYear}</p>
-                </div>
-              </div>
-              {card.isDefault && (
-                <span className="text-xs bg-maroon/20 text-maroon px-2 py-0.5 rounded">Default</span>
-              )}
-            </div>
-            <div className="flex gap-3 mt-3">
-              <button className="text-sm text-maroon hover:underline">Edit</button>
-              <button className="text-sm text-red-500 hover:underline">Remove</button>
-              {!card.isDefault && (
-                <button className="text-sm text-gray-500 hover:underline">Set as Default</button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    )}
-
-    {/* Add Card Form (hidden by default, shown on button click) */}
-    {/* You can add a modal similar to address form */}
-  </div>
-)}
           {/* Addresses Section */}
           {activeSection === 'addresses' && (
             <div className="bg-white rounded-xl shadow-sm p-5">
@@ -766,6 +852,54 @@ export default function Dashboard() {
                   <button className="bg-maroon text-white px-4 py-1 rounded-lg text-sm">Configure</button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Saved Cards Section */}
+          {activeSection === 'cards' && (
+            <div className="bg-white rounded-xl shadow-sm p-5">
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">Saved Cards</h1>
+                <button className="bg-maroon text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+                  <Plus size={16} /> Add New Card
+                </button>
+              </div>
+
+              {!userData?.savedCards || userData.savedCards.length === 0 ? (
+                <div className="text-center py-12">
+                  <CreditCard size={48} className="mx-auto text-gray-300 mb-3" />
+                  <p className="text-gray-500">No saved cards yet</p>
+                  <p className="text-sm text-gray-400 mt-1">Add a card for faster checkout</p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {userData.savedCards.map((card, idx) => (
+                    <div key={idx} className={`border rounded-lg p-4 ${card.isDefault ? 'border-maroon/30 bg-maroon/5' : ''}`}>
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-8 bg-gray-800 rounded flex items-center justify-center text-white text-xs font-bold">
+                            {card.cardType === 'Visa' ? 'VISA' : card.cardType === 'Mastercard' ? 'MC' : '卡'}
+                          </div>
+                          <div>
+                            <p className="font-medium">•••• •••• •••• {card.last4}</p>
+                            <p className="text-sm text-gray-500">Expires {card.expiryMonth}/{card.expiryYear}</p>
+                          </div>
+                        </div>
+                        {card.isDefault && (
+                          <span className="text-xs bg-maroon/20 text-maroon px-2 py-0.5 rounded">Default</span>
+                        )}
+                      </div>
+                      <div className="flex gap-3 mt-3">
+                        <button className="text-sm text-maroon hover:underline">Edit</button>
+                        <button className="text-sm text-red-500 hover:underline">Remove</button>
+                        {!card.isDefault && (
+                          <button className="text-sm text-gray-500 hover:underline">Set as Default</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

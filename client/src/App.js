@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { CartProvider } from './context/CartContext';
@@ -10,29 +10,34 @@ import DiscountBanner from './components/DiscountBanner';
 import FirstTimePopup from './components/FirstTimePopup';
 import SessionTimeout from './components/SessionTimeout';
 import ExitIntentPopup from './components/ExitIntentPopup';
-import Home from './pages/Home';
-import Products from './pages/Products';
-import ProductDetail from './pages/ProductDetail';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Quiz from './pages/Quiz';
-import About from './pages/About';
-import Help from './pages/Help';
-import Offers from './pages/Offers';
-import OrderConfirmation from './pages/OrderConfirmation';
-import Invoice from './pages/Invoice';
-import Reviews from './pages/Reviews';
-import Feedback from './pages/Feedback';
-import Privacy from './pages/Privacy';
-import Terms from './pages/Terms';
-import Returns from './pages/Returns';
-import AdminDashboard from './pages/admin/AdminDashboard';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
-import BIHub from './pages/admin/BIHub';
+import { DermaLoader } from './components/Loader';
+
+// Lazy load pages for better performance
+const Home = lazy(() => import('./pages/Home'));
+const Products = lazy(() => import('./pages/Products'));
+const ProductDetail = lazy(() => import('./pages/ProductDetail'));
+const Cart = lazy(() => import('./pages/Cart'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Quiz = lazy(() => import('./pages/Quiz'));
+const About = lazy(() => import('./pages/About'));
+const Help = lazy(() => import('./pages/Help'));
+const Offers = lazy(() => import('./pages/Offers'));
+const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'));
+const Invoice = lazy(() => import('./pages/Invoice'));
+const Reviews = lazy(() => import('./pages/Reviews'));
+const Feedback = lazy(() => import('./pages/Feedback'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Returns = lazy(() => import('./pages/Returns'));
+const TrackOrder = lazy(() => import('./pages/TrackOrder'));
+const SlotMachine = lazy(() => import('./pages/SlotMachine'));
+const BIHub = lazy(() => import('./pages/admin/BIHub'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 
 function App() {
   return (
@@ -44,49 +49,68 @@ function App() {
             <SessionTimeout />
             <FirstTimePopup />
             <ExitIntentPopup />
-            
+
             <Routes>
               {/* Admin routes - NO Navbar/Footer */}
               <Route path="/admin/*" element={
                 <AdminRoute>
-                  <AdminDashboard />
+                  <Suspense fallback={<DermaLoader message="Loading admin panel..." />}>
+                    <AdminDashboard />
+                  </Suspense>
                 </AdminRoute>
               } />
+
+              {/* BIHub route */}
+              <Route path="/admin/bidashboard" element={
+                <AdminRoute>
+                  <Suspense fallback={<DermaLoader message="Loading BI Dashboard..." />}>
+                    <BIHub />
+                  </Suspense>
+                </AdminRoute>
+              } />
+
+              {/* Dashboard route */}
               <Route path="/dashboard" element={
                 <PrivateRoute>
-                  <Dashboard />
+                  <Suspense fallback={<DermaLoader />}>
+                    <Dashboard />
+                  </Suspense>
                 </PrivateRoute>
               } />
+
               {/* Public routes - WITH Navbar/Footer */}
               <Route path="*" element={
                 <div className="min-h-screen bg-background flex flex-col">
                   <DiscountBanner />
                   <Navbar />
                   <main className="flex-grow">
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/home" element={<Home />} />
-                      <Route path="/products" element={<Products />} />
-                      <Route path="/product/:id" element={<ProductDetail />} />
-                      <Route path="/quiz" element={<Quiz />} />
-                      <Route path="/cart" element={<Cart />} />
-                      <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/register" element={<Register />} />
-                      <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-                      <Route path="/about" element={<About />} />
-                      <Route path="/help" element={<Help />} />
-                      <Route path="/offers" element={<Offers />} />
-                      <Route path="/order-confirmation/:id" element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
-                      <Route path="/invoice/:id" element={<PrivateRoute><Invoice /></PrivateRoute>} />
-                      <Route path="/reviews" element={<Reviews />} />
-                      <Route path="/feedback" element={<Feedback />} />
-                      <Route path="/privacy" element={<Privacy />} />
-                      <Route path="/terms" element={<Terms />} />
-                      <Route path="/returns" element={<Returns />} />
-                      <Route path="/admin/bidashboard" element={<BIHub />} />
-                     
-                    </Routes>
+                    <Suspense fallback={<DermaLoader />}>
+                      <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/home" element={<Home />} />
+                        <Route path="/products" element={<Products />} />
+                        <Route path="/product/:id" element={<ProductDetail />} />
+                        <Route path="/quiz" element={<Quiz />} />
+                        <Route path="/cart" element={<Cart />} />
+                        <Route path="/track" element={<TrackOrder />} />
+                        <Route path="/slot" element={<SlotMachine />} />
+                        <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/about" element={<About />} />
+                        <Route path="/help" element={<Help />} />
+                        <Route path="/offers" element={<Offers />} />
+                        <Route path="/order-confirmation/:id" element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
+                        <Route path="/invoice/:id" element={<PrivateRoute><Invoice /></PrivateRoute>} />
+                        <Route path="/reviews" element={<Reviews />} />
+                        <Route path="/feedback" element={<Feedback />} />
+                        <Route path="/privacy" element={<Privacy />} />
+                        <Route path="/terms" element={<Terms />} />
+                        <Route path="/returns" element={<Returns />} />
+                        // In App.js
+<Route path="/track" element={<TrackOrder />} />
+                      </Routes>
+                    </Suspense>
                   </main>
                   <Footer />
                 </div>

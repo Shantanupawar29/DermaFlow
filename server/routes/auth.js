@@ -7,6 +7,7 @@ const AuditLog = require('../models/AuditLog');
 const aiService = require('../services/aiService');
 const { protect } = require('../middleware/auth');
 const Order = require('../models/Order');
+
 const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
 let sendWelcomeEmail = null;
@@ -26,15 +27,18 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Email already registered' });
 
     const voucherCode = `WELCOME${Math.floor(Math.random() * 9000 + 1000)}`;
-
+    const referralCode = name.split(' ')[0].toUpperCase() + Math.floor(1000 + Math.random() * 9000);
+    
     const user = await User.create({
       name,
       email,
       password,
       glowPoints: 50,
+      referralCode,
       vouchers: [{
         code: voucherCode,
         discount: 15,
+        type: 'percent',
         isUsed: false,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       }],
@@ -61,11 +65,9 @@ router.post('/update-skin-profile', protect, async (req, res) => {
     const { answers } = req.body;
     const user = await User.findById(req.user._id);
 
-    // Update basic info
     user.skinProfile.skinType = answers.skinType;
     user.skinProfile.concerns = answers.concerns;
 
-    // Call the AI Service to generate the routine based on their answers
     const { am, pm } = await aiService.generateRoutine(answers.skinType, answers.concerns);
     
     user.skinProfile.routine = { am, pm };
@@ -91,8 +93,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Use the comparePassword method
-   const isMatch = await user.comparePassword(password);
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
@@ -107,14 +108,35 @@ router.post('/login', async (req, res) => {
     res.json({ token, ...userResponse });
   } catch (err) {
     console.error('Login error:', err.message);
-      console.error('🔥 FULL ERROR:', err);
-  console.error(err.stack);   // 👈 ADD THIS
-  res.status(500).json({ message: err.message });
+    console.error('🔥 FULL ERROR:', err);
+    console.error(err.stack);
     res.status(500).json({ message: err.message });
   }
 });
 
-// 1. Update User Address (SCM/CRM Pillar)
+// GET /api/auth/me - FIXED VERSION
+router.get('/me', protect, (req, res) => {
+  try {
+    const userResponse = req.user.toObject ? req.user.toObject() : req.user;
+    delete userResponse.password;
+    
+    // Return all user data including game fields
+    res.json({
+      ...userResponse,
+      lastSpinDate: req.user.lastSpinDate,
+      lastScratchDate: req.user.lastScratchDate,
+      lastSlotDate: req.user.lastSlotDate,
+      slotCreditsLeft: req.user.slotCreditsLeft || 3,
+      luckyDrawEntered: req.user.luckyDrawEntered || false,
+      luckyDrawEntries: req.user.luckyDrawEntries || 0
+    });
+  } catch (error) {
+    console.error('Me endpoint error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// PUT /api/auth/address
 router.put('/address', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -127,7 +149,7 @@ router.put('/address', protect, async (req, res) => {
   }
 });
 
-// 2. Recycle Plastic Trigger (CRM/Sustainability Pillar)
+// POST /api/auth/recycle
 router.post('/recycle', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -138,7 +160,6 @@ router.post('/recycle', protect, async (req, res) => {
     
     await user.save();
 
-    // SECURITY: Log this point change (if AuditLog model exists)
     try {
       await AuditLog.create({
         action: 'UPDATE_USER_DATA',
@@ -155,13 +176,6 @@ router.post('/recycle', protect, async (req, res) => {
   } catch (error) { 
     res.status(500).json({ message: error.message }); 
   }
-});
-
-// GET /api/auth/me
-router.get('/me', protect, (req, res) => {
-  const userResponse = req.user.toObject ? req.user.toObject() : req.user;
-  delete userResponse.password;
-  res.json(userResponse);
 });
 
 // PUT /api/auth/profile
@@ -197,9 +211,8 @@ router.post('/apply-voucher', protect, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-// Add these to your existing auth.js file
 
-// Get user stats (alternative endpoint)
+// GET /api/auth/stats
 router.get('/stats', protect, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id });
@@ -219,7 +232,7 @@ router.get('/stats', protect, async (req, res) => {
   }
 });
 
-// Get user addresses
+// GET /api/auth/addresses
 router.get('/addresses', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -229,7 +242,7 @@ router.get('/addresses', protect, async (req, res) => {
   }
 });
 
-// Get user wishlist
+// GET /api/auth/wishlist
 router.get('/wishlist', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate('wishlist');
@@ -238,22 +251,20 @@ router.get('/wishlist', protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-// POST /api/auth/wishlist/:productId - Toggle Add/Remove
+
+// POST /api/auth/wishlist/:productId
 router.post('/wishlist/:productId', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     const productId = req.params.productId;
 
-    // Check if it's already in the wishlist
     const index = user.wishlist.indexOf(productId);
 
     if (index === -1) {
-      // Add it
       user.wishlist.push(productId);
       await user.save();
       res.json({ message: 'Added to wishlist', isWishlisted: true });
     } else {
-      // Remove it
       user.wishlist.splice(index, 1);
       await user.save();
       res.json({ message: 'Removed from wishlist', isWishlisted: false });
@@ -262,7 +273,8 @@ router.post('/wishlist/:productId', protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-// Get pending reviews
+
+// GET /api/auth/pending-reviews
 router.get('/pending-reviews', protect, async (req, res) => {
   try {
     const Review = require('../models/Review');
@@ -295,13 +307,12 @@ router.get('/pending-reviews', protect, async (req, res) => {
   }
 });
 
-// Submit a review
+// POST /api/auth/reviews
 router.post('/reviews', protect, async (req, res) => {
   try {
     const Review = require('../models/Review');
     const { productId, orderId, rating, title, comment } = req.body;
     
-    // Check if user has purchased this product
     const order = await Order.findOne({ 
       _id: orderId, 
       user: req.user._id,
@@ -312,7 +323,6 @@ router.post('/reviews', protect, async (req, res) => {
       return res.status(403).json({ message: 'You can only review products you have purchased' });
     }
     
-    // Check if already reviewed
     const existingReview = await Review.findOne({ 
       product: productId, 
       user: req.user._id,
@@ -334,17 +344,15 @@ router.post('/reviews', protect, async (req, res) => {
       email: req.user.email
     });
     
-    // Update product rating
     const Product = require('../models/Product');
     const product = await Product.findById(productId);
     const allReviews = await Review.find({ product: productId, isApproved: true });
-    const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+    const avgRating = allReviews.length > 0 ? allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length : rating;
     
-    product.rating = avgRating;
+    product.rating = Math.round(avgRating * 10) / 10;
     product.numReviews = allReviews.length;
     await product.save();
     
-    // Add glow points for review
     const user = await User.findById(req.user._id);
     user.glowPoints = (user.glowPoints || 0) + 25;
     await user.save();
@@ -355,9 +363,10 @@ router.post('/reviews', protect, async (req, res) => {
   }
 });
 
+// POST /api/auth/scratch
 router.post('/scratch', protect, async (req, res) => {
   try {
-    const { prize, orderId } = req.body;
+    const { prize } = req.body;
     const user = await User.findById(req.user._id);
 
     const today = new Date().toDateString();
@@ -371,66 +380,177 @@ router.post('/scratch', protect, async (req, res) => {
 
     if (prize.type === 'points') {
       user.glowPoints = (user.glowPoints || 0) + (prize.pts || 0);
-    } else if (prize.type === 'own' || prize.type === 'affiliate' || prize.type === 'shipping') {
+    } else if (prize.type === 'voucher' || prize.type === 'affiliate' || prize.type === 'shipping') {
       voucherCode = `SCR${Date.now().toString(36).toUpperCase()}`;
       if (!user.vouchers) user.vouchers = [];
       user.vouchers.push({
-        code:      voucherCode,
-        discount:  prize.discount || 0,
-        type:      prize.flat ? 'flat' : 'percent',
-        partner:   prize.partner || null,
-        isUsed:    false,
+        code: voucherCode,
+        discount: prize.discount || 0,
+        type: prize.flat ? 'flat' : 'percent',
+        partner: prize.partner || null,
+        isUsed: false,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
     }
 
     await user.save();
-    res.json({ success: true, voucherCode, glowPoints: user.glowPoints });
+    res.json({ success: true, voucherCode, glowPoints: user.glowPoints, vouchers: user.vouchers });
   } catch (err) {
+    console.error('Scratch error:', err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// ── POST /api/auth/lucky-draw — enter the lucky draw ─────────────────────────
+// POST /api/auth/spin
+router.post('/spin', protect, async (req, res) => {
+  try {
+    const { prize } = req.body;
+    const user = await User.findById(req.user._id);
+    
+    const today = new Date().toDateString();
+    const lastSpin = user.lastSpinDate ? new Date(user.lastSpinDate).toDateString() : null;
+    if (lastSpin === today) {
+      return res.status(429).json({ message: 'Already spun today' });
+    }
+    
+    user.lastSpinDate = new Date();
+    
+    let voucherCode = null;
+    let pointsAdded = 0;
+    
+    if (prize.type === 'points') {
+      pointsAdded = prize.pts || 0;
+      user.glowPoints = (user.glowPoints || 0) + pointsAdded;
+    } 
+    else if (prize.type === 'voucher') {
+      voucherCode = `SPIN${Date.now().toString(36).toUpperCase()}`;
+      if (!user.vouchers) user.vouchers = [];
+      user.vouchers.push({
+        code: voucherCode,
+        discount: prize.discount || 0,
+        type: prize.flat ? 'flat' : 'percent',
+        isUsed: false,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
+    }
+    else if (prize.type === 'affiliate') {
+      voucherCode = `AFF${Date.now().toString(36).toUpperCase()}`;
+      if (!user.vouchers) user.vouchers = [];
+      user.vouchers.push({
+        code: voucherCode,
+        discount: prize.discount || 0,
+        type: prize.flat ? 'flat' : 'percent',
+        partner: prize.partner,
+        minOrder: prize.minOrder,
+        isUsed: false,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+    }
+    
+    await user.save();
+    
+    res.json({ 
+      success: true, 
+      glowPoints: user.glowPoints,
+      vouchers: user.vouchers,
+      pointsAdded,
+      voucherCode
+    });
+  } catch (error) {
+    console.error('Spin save error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST /api/auth/lucky-draw
 router.post('/lucky-draw', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+    
     if (user.luckyDrawEntered) {
-      return res.status(400).json({ message: 'Already entered' });
+      return res.status(400).json({ message: 'Already entered the lucky draw' });
     }
+    
     user.luckyDrawEntered = true;
-    // Bonus entries for orders
-    user.luckyDrawEntries = 1 + (user.orderCount || 0) * 3;
+    user.luckyDrawEntries = 1 + ((user.orderCount || 0) * 3);
     await user.save();
-    res.json({ success: true, entries: user.luckyDrawEntries });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    
+    res.json({ 
+      success: true, 
+      message: 'Successfully entered lucky draw!',
+      entries: user.luckyDrawEntries
+    });
+  } catch (error) {
+    console.error('Lucky draw error:', error);
+    res.status(500).json({ message: error.message });
   }
 });
 
-// ── POST /api/auth/redeem-points — convert glow points to discount ────────────
+// POST /api/auth/slot-win
+// In auth.js - make sure this endpoint exists
+router.post('/slot-win', protect, async (req, res) => {
+  try {
+    const { pts, symbols } = req.body;
+    const user = await User.findById(req.user._id);
+    
+    const today = new Date().toDateString();
+    const lastSlot = user.lastSlotDate ? new Date(user.lastSlotDate).toDateString() : null;
+    
+    if (lastSlot !== today) {
+      // New day - reset credits to 3, but this spin uses 1
+      user.lastSlotDate = new Date();
+      user.slotCreditsLeft = 2; // 3 total, 1 used this spin
+    } else {
+      // Same day - decrement credits
+      const currentCredits = user.slotCreditsLeft !== undefined ? user.slotCreditsLeft : 3;
+      user.slotCreditsLeft = Math.max(0, currentCredits - 1);
+    }
+    
+    // Add points if won
+    if (pts && pts > 0) {
+      user.glowPoints = (user.glowPoints || 0) + pts;
+    }
+    
+    await user.save();
+    
+    res.json({ 
+      success: true, 
+      glowPoints: user.glowPoints,
+      creditsLeft: user.slotCreditsLeft
+    });
+  } catch (error) {
+    console.error('Slot win error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST /api/auth/redeem-points
 router.post('/redeem-points', protect, async (req, res) => {
   try {
-    const { points } = req.body; // multiples of 100
+    const { points } = req.body;
     const user = await User.findById(req.user._id);
 
     if (!points || points < 100) return res.status(400).json({ message: 'Minimum redemption is 100 points' });
-    if (points % 100 !== 0)      return res.status(400).json({ message: 'Points must be in multiples of 100' });
+    if (points % 100 !== 0) return res.status(400).json({ message: 'Points must be in multiples of 100' });
     if ((user.glowPoints || 0) < points) return res.status(400).json({ message: 'Insufficient Glow Points' });
 
-    const discountRs = (points / 100) * 10; // 100 pts = ₹10
+    const discountRs = (points / 100) * 10;
     const voucherCode = `GP${Date.now().toString(36).toUpperCase()}`;
 
     user.glowPoints -= points;
     if (!user.vouchers) user.vouchers = [];
     user.vouchers.push({
-      code: voucherCode, discount: discountRs, type: 'flat',
-      isUsed: false, expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      code: voucherCode,
+      discount: discountRs,
+      type: 'flat',
+      isUsed: false,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
     await user.save();
 
     res.json({ success: true, voucherCode, discountRs, remainingPoints: user.glowPoints });
   } catch (err) {
+    console.error('Redeem points error:', err);
     res.status(500).json({ message: err.message });
   }
 });

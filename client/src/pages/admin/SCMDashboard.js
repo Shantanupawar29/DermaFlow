@@ -237,7 +237,7 @@ export default function SCMDashboard() {
 
       {/* SCM Strategies Info */}
       <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-3">📊 SCM Strategies Implemented</h3>
+        <h3 className="text-lg font-semibold mb-3"> SCM Strategies Implemented</h3>
         <div className="grid md:grid-cols-3 gap-4">
           <div className="bg-white rounded-lg p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-2">

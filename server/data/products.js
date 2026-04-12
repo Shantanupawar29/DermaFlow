@@ -33,8 +33,8 @@ const products = [
     numReviews: 89,
     isActive: true,
     discountPercentage: 0,
-    modelPath: "", // Path relative to public folder
-    has3D: false,
+    modelPath: "/models/vitaminc.glb", // Path relative to public folder
+    has3D: true,
   },
   {
     name: "Hyaluronic Acid Moisturiser",
@@ -105,8 +105,8 @@ const products = [
     numReviews: 312,
     isActive: true,
     discountPercentage: 5,
-    modelPath: "", // Path relative to public folder
-    has3D: false,
+    modelPath: "/models/sunscreen.glb", // Path relative to public folder
+    has3D: true,
   },
   {
     name: "AHA Glycolic Acid Exfoliator",
@@ -161,8 +161,8 @@ const products = [
     numReviews: 54,
     isActive: true,
     discountPercentage: 0,
-    modelPath: "", // Path relative to public folder
-    has3D: false,
+    modelPath: "/models/hairserum.glb", // Path relative to public folder
+    has3D: true,
   },
   {
     name: "Keratin Repair Hair Mask",
@@ -179,8 +179,8 @@ const products = [
     numReviews: 42,
     isActive: true,
     discountPercentage: 15,
-    modelPath: "", // Path relative to public folder
-    has3D: false,
+    modelPath: "/models/hairmask.glb", // Path relative to public folder
+    has3D: true,
   },
   {
     name: "Scalp Detox Exfoliating Scrub",

@@ -47,7 +47,8 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/payment', paymentRoutes);
-
+app.use('/api/sales',         require('./routes/sales'));           // NEW: flash sales + winback
+app.use('/api/subscriptions', require('./routes/subscriptions')); 
 // ERP and CRM routes
 try {
   const erpRoutes = require('./routes/erp');

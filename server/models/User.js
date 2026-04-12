@@ -81,7 +81,7 @@ const userSchema = new mongoose.Schema({
   totalSpent: { type: Number, default: 0 },
   orderCount: { type: Number, default: 0 },
   loyaltyTier: { type: String, enum: ['bronze', 'silver', 'gold', 'platinum'], default: 'bronze' },
-  referralCode:   { type: String, unique: true, sparse: true },
+  referralCode: { type: String, unique: true, sparse: true },
    referredBy:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
    referralCount:  { type: Number, default: 0 },
   vouchers: [voucherSchema],
@@ -90,7 +90,7 @@ const userSchema = new mongoose.Schema({
   // Lucky draw
   luckyDrawEntered: { type: Boolean, default: false },
   luckyDrawEntries: { type: Number, default: 0 },
-
+slotCreditsLeft: { type: Number, default: 3 },
   // Email preferences
   emailPrefs: {
     orderUpdates:    { type: Boolean, default: true },

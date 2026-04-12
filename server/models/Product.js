@@ -78,7 +78,10 @@ const productSchema = new mongoose.Schema({
   leadTimeDays: { type: Number, default: 7 },
   autoReorder: { type: Boolean, default: false },
   lastReplenished: Date,
-  salesVelocity: { type: Number, default: 0 }
+  salesVelocity: { type: Number, default: 0 },
+
+  modelPath: { type: String, default: "" }, // Path like "/models/retinol.glb"
+  has3D: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.models.Product || mongoose.model('Product', productSchema);

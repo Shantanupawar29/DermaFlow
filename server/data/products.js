@@ -10,11 +10,13 @@ const products = [
     ingredients: ["Retinol 0.5%", "Hyaluronic Acid", "Vitamin E", "Squalane"],
     stockQuantity: 15,
     safetyThreshold: 5,
-    images: ["https://images.pexels.com/photos/4041392/pexels-photo-4041392.jpeg?auto=compress&cs=tinysrgb&w=600"],
+    images: ["/assets/products/Retinol-Renewal-Serum.png"],
     rating: 4.8,
     numReviews: 124,
     isActive: true,
     discountPercentage: 10,
+    modelPath: "", // Path relative to public folder
+    has3D: false,
   },
   {
     name: "Vitamin C Brightening Drops",
@@ -26,11 +28,13 @@ const products = [
     ingredients: ["Vitamin C 15%", "Ferulic Acid", "Vitamin E", "Niacinamide"],
     stockQuantity: 25,
     safetyThreshold: 5,
-    images: ["https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=600"],
+    images: ["/assets/products/Vitamin-C.png"],
     rating: 4.9,
     numReviews: 89,
     isActive: true,
     discountPercentage: 0,
+    modelPath: "", // Path relative to public folder
+    has3D: false,
   },
   {
     name: "Hyaluronic Acid Moisturiser",
@@ -42,11 +46,13 @@ const products = [
     ingredients: ["Hyaluronic Acid", "Ceramides", "Squalane", "Panthenol"],
     stockQuantity: 45,
     safetyThreshold: 10,
-    images: ["https://images.pexels.com/photos/6621462/pexels-photo-6621462.jpeg?auto=compress&cs=tinysrgb&w=600"],
+    images: ["/assets/products/Barrier-Reset.png"],
     rating: 4.7,
     numReviews: 203,
     isActive: true,
     discountPercentage: 15,
+    modelPath: "/models/barrier_reset_cream.glb", // Path relative to public folder
+    has3D: true,
   },
   {
     name: "Salicylic Acid BHA Cleanser",
@@ -58,11 +64,13 @@ const products = [
     ingredients: ["Salicylic Acid 2%", "Niacinamide", "Aloe Vera", "Green Tea Extract"],
     stockQuantity: 12, // Updated from 0 for demo purposes
     safetyThreshold: 5,
-    images: ["https://images.pexels.com/photos/4046316/pexels-photo-4046316.jpeg?auto=compress&cs=tinysrgb&w=600"],
+    images: ["/assets/products/Salicylic-Acid.png"],
     rating: 4.6,
     numReviews: 167,
     isActive: true,
     discountPercentage: 20,
+    modelPath: "", // Path relative to public folder
+    has3D: false,
   },
   {
     name: "Niacinamide 10% Pore Serum",
@@ -74,11 +82,13 @@ const products = [
     ingredients: ["Niacinamide 10%", "Zinc PCA", "Hyaluronic Acid"],
     stockQuantity: 38,
     safetyThreshold: 8,
-    images: ["https://images.pexels.com/photos/5069609/pexels-photo-5069609.jpeg?auto=compress&cs=tinysrgb&w=600"],
+    images: ["/assets/products/Niacinamide-Serum.png"],
     rating: 4.8,
     numReviews: 145,
     isActive: true,
     discountPercentage: 0,
+    modelPath: "", // Path relative to public folder
+    has3D: false,
   },
   {
     name: "SPF 50 PA++++ Sunscreen Fluid",
@@ -90,11 +100,13 @@ const products = [
     ingredients: ["Tinosorb S", "Uvinul A Plus", "Niacinamide", "Aloe Vera"],
     stockQuantity: 60,
     safetyThreshold: 10,
-    images: ["https://images.pexels.com/photos/3762875/pexels-photo-3762875.jpeg?auto=compress&cs=tinysrgb&w=600"],
+    images: ["/assets/products/Sunscreen.png"],
     rating: 4.9,
     numReviews: 312,
     isActive: true,
     discountPercentage: 5,
+    modelPath: "", // Path relative to public folder
+    has3D: false,
   },
   {
     name: "AHA Glycolic Acid Exfoliator",
@@ -106,11 +118,13 @@ const products = [
     ingredients: ["Glycolic Acid 10%", "Lactic Acid", "Aloe Vera"],
     stockQuantity: 22,
     safetyThreshold: 5,
-    images: ["https://images.pexels.com/photos/8154511/pexels-photo-8154511.jpeg?auto=compress&cs=tinysrgb&w=600"],
+    images: ["/assets/products/Glycolic-Acid.png"],
     rating: 4.5,
     numReviews: 98,
     isActive: true,
     discountPercentage: 0,
+    modelPath: "/models/glycolic_acid_exfoliator.glb", // Path relative to public folder
+    has3D: true,
   },
   {
     name: "Peptide Anti-Aging Eye Cream",
@@ -122,11 +136,13 @@ const products = [
     ingredients: ["Matrixyl 3000", "Caffeine", "Hyaluronic Acid", "Vitamin K"],
     stockQuantity: 18,
     safetyThreshold: 5,
-    images: ["https://images.pexels.com/photos/6621462/pexels-photo-6621462.jpeg"],
+    images: ["/assets/products/Eye-Serum.png"],
     rating: 4.7,
     numReviews: 76,
     isActive: true,
     discountPercentage: 10,
+    modelPath: "/models/caffeine_perk_eye_serum.glb", // Path relative to public folder
+    has3D: true,
   },
 
   // ─── HAIRCARE ─────────────────────────────────────────────
@@ -140,11 +156,13 @@ const products = [
     ingredients: ["Biotin", "Caffeine", "Copper Peptides", "Redensyl"],
     stockQuantity: 30,
     safetyThreshold: 8,
-    images: ["https://images.pexels.com/photos/4041391/pexels-photo-4041391.jpeg"],
+    images: ["/assets/products/Hair-Serum.png"],
     rating: 4.6,
     numReviews: 54,
     isActive: true,
     discountPercentage: 0,
+    modelPath: "", // Path relative to public folder
+    has3D: false,
   },
   {
     name: "Keratin Repair Hair Mask",
@@ -156,11 +174,13 @@ const products = [
     ingredients: ["Keratin", "Argan Oil", "Hydrolysed Protein", "Shea Butter"],
     stockQuantity: 20,
     safetyThreshold: 5,
-    images: ["https://images.pexels.com/photos/6621339/pexels-photo-6621339.jpeg?auto=compress&cs=tinysrgb&w=600"],
+    images: ["/assets/products/Hair-Mask.png"],
     rating: 4.8,
     numReviews: 42,
     isActive: true,
     discountPercentage: 15,
+    modelPath: "", // Path relative to public folder
+    has3D: false,
   },
   {
     name: "Scalp Detox Exfoliating Scrub",
@@ -172,11 +192,13 @@ const products = [
     ingredients: ["Salicylic Acid", "Zinc Pyrithione", "Peppermint Oil", "Kaolin"],
     stockQuantity: 35,
     safetyThreshold: 7,
-    images: ["https://images.pexels.com/photos/3993454/pexels-photo-3993454.jpeg?auto=compress&cs=tinysrgb&w=600"],
+    images: ["/assets/products/Scalp-Scrub.png"],
     rating: 4.5,
     numReviews: 38,
     isActive: true,
     discountPercentage: 0,
+    modelPath: "/models/rscalp_detox_scrub.glb", // Path relative to public folder
+    has3D: true,
   },
   {
     name: "Argan Oil Shine & Frizz Serum",
@@ -188,11 +210,13 @@ const products = [
     ingredients: ["Argan Oil", "Cyclomethicone", "Vitamin E", "Keratin"],
     stockQuantity: 28,
     safetyThreshold: 6,
-    images: ["https://images.pexels.com/photos/3736399/pexels-photo-3736399.jpeg?auto=compress&cs=tinysrgb&w=600"],
+    images: ["/assets/products/Rice-Water.png"],
     rating: 4.7,
     numReviews: 61,
     isActive: true,
     discountPercentage: 10,
+    modelPath: "", // Path relative to public folder
+    has3D: false,
   },
 ];
 

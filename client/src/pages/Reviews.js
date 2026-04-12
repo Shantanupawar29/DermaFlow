@@ -17,7 +17,7 @@ export default function Reviews() {
   const fetchReviews = async () => {
     try {
       const response = await axios.get(`${API_URL}/reviews`);
-      setReviews(response.data);
+      setReviews(response.data.reviews || []);
       if (response.data.length > 0) {
         const avg = response.data.reduce((sum, r) => sum + r.rating, 0) / response.data.length;
         setAverageRating(avg);

@@ -224,5 +224,79 @@ router.get('/stats', protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+// Add these to your existing profile.js file
 
+// ============ SAVED CARDS ============
+
+// Get all saved cards
+router.get('/cards', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    res.json(user.savedCards || []);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Add a new card
+router.post('/cards', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const { last4, cardType, expiryMonth, expiryYear, isDefault } = req.body;
+    
+    if (!user.savedCards) user.savedCards = [];
+    
+    // If this is the first card or marked as default, update others
+    if (user.savedCards.length === 0 || isDefault) {
+      user.savedCards.forEach(card => { card.isDefault = false; });
+    }
+    
+    user.savedCards.push({
+      last4,
+      cardType,
+      expiryMonth,
+      expiryYear,
+      isDefault: isDefault || user.savedCards.length === 0
+    });
+    
+    await user.save();
+    res.json({ message: 'Card saved successfully', cards: user.savedCards });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete a saved card
+router.delete('/cards/:cardId', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    user.savedCards = user.savedCards.filter(c => c._id.toString() !== req.params.cardId);
+    
+    // If deleted card was default, make another default
+    if (user.savedCards.length > 0 && !user.savedCards.some(c => c.isDefault)) {
+      user.savedCards[0].isDefault = true;
+    }
+    
+    await user.save();
+    res.json({ message: 'Card deleted successfully', cards: user.savedCards });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Set default card
+router.put('/cards/:cardId/default', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    
+    user.savedCards.forEach(card => {
+      card.isDefault = card._id.toString() === req.params.cardId;
+    });
+    
+    await user.save();
+    res.json({ message: 'Default card updated', cards: user.savedCards });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 module.exports = router;

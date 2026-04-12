@@ -238,7 +238,30 @@ router.get('/wishlist', protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+// POST /api/auth/wishlist/:productId - Toggle Add/Remove
+router.post('/wishlist/:productId', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const productId = req.params.productId;
 
+    // Check if it's already in the wishlist
+    const index = user.wishlist.indexOf(productId);
+
+    if (index === -1) {
+      // Add it
+      user.wishlist.push(productId);
+      await user.save();
+      res.json({ message: 'Added to wishlist', isWishlisted: true });
+    } else {
+      // Remove it
+      user.wishlist.splice(index, 1);
+      await user.save();
+      res.json({ message: 'Removed from wishlist', isWishlisted: false });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 // Get pending reviews
 router.get('/pending-reviews', protect, async (req, res) => {
   try {
@@ -331,4 +354,85 @@ router.post('/reviews', protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+router.post('/scratch', protect, async (req, res) => {
+  try {
+    const { prize, orderId } = req.body;
+    const user = await User.findById(req.user._id);
+
+    const today = new Date().toDateString();
+    const lastScratch = user.lastScratchDate ? new Date(user.lastScratchDate).toDateString() : null;
+    if (lastScratch === today) {
+      return res.status(429).json({ message: 'Already scratched today' });
+    }
+
+    user.lastScratchDate = new Date();
+    let voucherCode = null;
+
+    if (prize.type === 'points') {
+      user.glowPoints = (user.glowPoints || 0) + (prize.pts || 0);
+    } else if (prize.type === 'own' || prize.type === 'affiliate' || prize.type === 'shipping') {
+      voucherCode = `SCR${Date.now().toString(36).toUpperCase()}`;
+      if (!user.vouchers) user.vouchers = [];
+      user.vouchers.push({
+        code:      voucherCode,
+        discount:  prize.discount || 0,
+        type:      prize.flat ? 'flat' : 'percent',
+        partner:   prize.partner || null,
+        isUsed:    false,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+    }
+
+    await user.save();
+    res.json({ success: true, voucherCode, glowPoints: user.glowPoints });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── POST /api/auth/lucky-draw — enter the lucky draw ─────────────────────────
+router.post('/lucky-draw', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (user.luckyDrawEntered) {
+      return res.status(400).json({ message: 'Already entered' });
+    }
+    user.luckyDrawEntered = true;
+    // Bonus entries for orders
+    user.luckyDrawEntries = 1 + (user.orderCount || 0) * 3;
+    await user.save();
+    res.json({ success: true, entries: user.luckyDrawEntries });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── POST /api/auth/redeem-points — convert glow points to discount ────────────
+router.post('/redeem-points', protect, async (req, res) => {
+  try {
+    const { points } = req.body; // multiples of 100
+    const user = await User.findById(req.user._id);
+
+    if (!points || points < 100) return res.status(400).json({ message: 'Minimum redemption is 100 points' });
+    if (points % 100 !== 0)      return res.status(400).json({ message: 'Points must be in multiples of 100' });
+    if ((user.glowPoints || 0) < points) return res.status(400).json({ message: 'Insufficient Glow Points' });
+
+    const discountRs = (points / 100) * 10; // 100 pts = ₹10
+    const voucherCode = `GP${Date.now().toString(36).toUpperCase()}`;
+
+    user.glowPoints -= points;
+    if (!user.vouchers) user.vouchers = [];
+    user.vouchers.push({
+      code: voucherCode, discount: discountRs, type: 'flat',
+      isUsed: false, expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+    await user.save();
+
+    res.json({ success: true, voucherCode, discountRs, remainingPoints: user.glowPoints });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

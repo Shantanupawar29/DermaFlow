@@ -2,9 +2,11 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const voucherSchema = new mongoose.Schema({
-  code: String,
-  discount: Number,
-  isUsed: { type: Boolean, default: false },
+  code:      String,
+  discount:  Number,
+  type:      { type: String, enum: ['percent', 'flat'], default: 'percent' },
+  partner:   String,   // 'Nykaa', 'Zomato' etc — null for own vouchers
+  isUsed:    { type: Boolean, default: false },
   expiresAt: Date,
 }, { _id: false });
 
@@ -54,15 +56,11 @@ const userSchema = new mongoose.Schema({
     newsletter: { type: Boolean, default: false },
     smsUpdates: { type: Boolean, default: false },
     language: { type: String, default: 'en' },
-    currency: { type: String, default: 'INR' }
+    currency: { type: String, default: 'INR' },
   },
 
   // Skin Profile
-  skinType: {
-    type: String,
-    enum: ['oily', 'dry', 'combination', 'normal', 'sensitive'],
-    default: null
-  },
+
   skinConcerns: [String],
   hairConcerns: [String],
   allergies: [String],
@@ -83,8 +81,24 @@ const userSchema = new mongoose.Schema({
   totalSpent: { type: Number, default: 0 },
   orderCount: { type: Number, default: 0 },
   loyaltyTier: { type: String, enum: ['bronze', 'silver', 'gold', 'platinum'], default: 'bronze' },
-
+  referralCode:   { type: String, unique: true, sparse: true },
+   referredBy:     { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+   referralCount:  { type: Number, default: 0 },
   vouchers: [voucherSchema],
+  lastSpinDate:    Date,
+  lastScratchDate: Date,
+  // Lucky draw
+  luckyDrawEntered: { type: Boolean, default: false },
+  luckyDrawEntries: { type: Number, default: 0 },
+
+  // Email preferences
+  emailPrefs: {
+    orderUpdates:    { type: Boolean, default: true },
+    reviewReminders: { type: Boolean, default: true },
+    loyaltyUpdates:  { type: Boolean, default: true },
+    marketing:       { type: Boolean, default: true },
+  },
+   
 
   lastLogin: Date,
   isActive: { type: Boolean, default: true },

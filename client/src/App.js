@@ -52,7 +52,11 @@ function App() {
                   <AdminDashboard />
                 </AdminRoute>
               } />
-              
+              <Route path="/dashboard" element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              } />
               {/* Public routes - WITH Navbar/Footer */}
               <Route path="*" element={
                 <div className="min-h-screen bg-background flex flex-col">

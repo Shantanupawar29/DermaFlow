@@ -1,15 +1,12 @@
-// client/src/pages/admin/ERPDashboard.js
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
 import {
   AlertTriangle, Package, TrendingUp, RefreshCw, Shield,
   FileText, X, Plus, ChevronRight, Clock, BarChart2,
   CheckCircle, XCircle, Layers, Thermometer, Activity,
   ArrowUpRight, ArrowDownRight, Info, Search, Filter
 } from 'lucide-react';
+import api from '../../services/api';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-const tok = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 const M = '#4A0E2E';
 const ML = '#6B1D45';
 
@@ -37,8 +34,6 @@ const CAT = {
   operational:    { color: '#16a34a', label: 'Operational' },
   security:       { color: '#1d4ed8', label: 'Security' },
 };
-
-// ── Reusable components ───────────────────────────────────────────────────────
 
 function KPICard({ label, value, icon, color, sub, trend }) {
   return (
@@ -103,20 +98,19 @@ function EmptyState({ icon, message }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 export default function ERPDashboard() {
-  const [tab, setTab]           = useState('overview');
-  const [dash, setDash]         = useState(null);
-  const [batches, setBatches]   = useState([]);
-  const [cogs, setCogs]         = useState(null);
+  const [tab, setTab] = useState('overview');
+  const [dash, setDash] = useState(null);
+  const [batches, setBatches] = useState([]);
+  const [cogs, setCogs] = useState(null);
   const [auditLog, setAuditLog] = useState([]);
   const [products, setProducts] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
-  const [showAdd, setShowAdd]   = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
-  const [searchTerm, setSearchTerm]     = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [newBatch, setNewBatch] = useState({
     productId: '', manufacturedDate: '', expiryDate: '',
     quantity: '', packagingCost: '', labourCost: '', shippingCost: ''
@@ -126,9 +120,9 @@ export default function ERPDashboard() {
     setLoading(true);
     try {
       const [dRes, bRes, pRes] = await Promise.allSettled([
-        axios.get(`${API}/erp/dashboard`, tok()),
-        axios.get(`${API}/erp/batches`, tok()),
-        axios.get(`${API}/products`),
+        api.get('/erp/dashboard'),
+        api.get('/erp/batches'),
+        api.get('/products'),
       ]);
       if (dRes.status === 'fulfilled') setDash(dRes.value.data);
       if (bRes.status === 'fulfilled') setBatches(bRes.value.data);
@@ -141,17 +135,17 @@ export default function ERPDashboard() {
 
   useEffect(() => {
     if (tab === 'cogs') {
-      axios.get(`${API}/erp/cogs-report`, tok()).then(r => setCogs(r.data)).catch(() => {});
+      api.get('/erp/cogs-report').then(r => setCogs(r.data)).catch(() => {});
     }
     if (tab === 'audit') {
-      axios.get(`${API}/erp/audit-log?limit=50`, tok()).then(r => setAuditLog(r.data.logs || [])).catch(() => {});
+      api.get('/erp/audit-log?limit=50').then(r => setAuditLog(r.data.logs || [])).catch(() => {});
     }
   }, [tab]);
 
   const runQualityCheck = async () => {
     setChecking(true);
     try {
-      const r = await axios.post(`${API}/erp/batches/check-quality`, {}, tok());
+      const r = await api.post('/erp/batches/check-quality', {});
       alert(r.data.message);
       fetchAll();
     } catch (e) { alert('Quality check failed: ' + (e.response?.data?.message || e.message)); }
@@ -162,7 +156,7 @@ export default function ERPDashboard() {
     const reason = window.prompt(`Reason for quarantining ${batchId}:`);
     if (!reason) return;
     try {
-      await axios.post(`${API}/erp/batches/${id}/quarantine`, { reason }, tok());
+      await api.post(`/erp/batches/${id}/quarantine`, { reason });
       fetchAll();
     } catch (e) { alert('Failed: ' + (e.response?.data?.message || e.message)); }
   };
@@ -173,13 +167,13 @@ export default function ERPDashboard() {
       return;
     }
     try {
-      await axios.post(`${API}/erp/batches`, {
+      await api.post('/erp/batches', {
         ...newBatch,
-        quantity:      Number(newBatch.quantity),
+        quantity: Number(newBatch.quantity),
         packagingCost: Number(newBatch.packagingCost) || 0,
-        labourCost:    Number(newBatch.labourCost) || 0,
-        shippingCost:  Number(newBatch.shippingCost) || 0,
-      }, tok());
+        labourCost: Number(newBatch.labourCost) || 0,
+        shippingCost: Number(newBatch.shippingCost) || 0,
+      });
       setShowAdd(false);
       setNewBatch({ productId: '', manufacturedDate: '', expiryDate: '', quantity: '', packagingCost: '', labourCost: '', shippingCost: '' });
       fetchAll();
@@ -253,11 +247,11 @@ export default function ERPDashboard() {
 
       {/* KPIs */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
-        <KPICard label="Total Batches"  value={dash?.batchStats?.total || batches.length}                                       icon={<Layers />}      color="#374151" />
-        <KPICard label="Active"         value={dash?.batchStats?.active || batches.filter(b=>b.status==='active').length}       icon={<CheckCircle />} color="#16a34a" />
-        <KPICard label="Quarantined"    value={dash?.batchStats?.quarantined || batches.filter(b=>b.status==='quarantined').length} icon={<XCircle />}  color="#dc2626" />
-        <KPICard label="Near Expiry"    value={dash?.batchStats?.nearExpiry || 0}                                               icon={<Clock />}       color="#d97706" sub="Within 90 days" />
-        <KPICard label="Avg Margin"     value={`${dash?.avgMargin || 0}%`}                                                      icon={<TrendingUp />}  color={M} />
+        <KPICard label="Total Batches"  value={dash?.batchStats?.total || batches.length} icon={<Layers />} color="#374151" />
+        <KPICard label="Active"         value={dash?.batchStats?.active || batches.filter(b => b.status === 'active').length} icon={<CheckCircle />} color="#16a34a" />
+        <KPICard label="Quarantined"    value={dash?.batchStats?.quarantined || batches.filter(b => b.status === 'quarantined').length} icon={<XCircle />} color="#dc2626" />
+        <KPICard label="Near Expiry"    value={dash?.batchStats?.nearExpiry || 0} icon={<Clock />} color="#d97706" sub="Within 90 days" />
+        <KPICard label="Avg Margin"     value={`${dash?.avgMargin || 0}%`} icon={<TrendingUp />} color={M} />
       </div>
 
       {/* Add Batch Form */}
@@ -308,10 +302,9 @@ export default function ERPDashboard() {
         {tabBtn('audit', 'Audit Log', FileText)}
       </div>
 
-      {/* ── OVERVIEW ── */}
+      {/* OVERVIEW TAB */}
       {tab === 'overview' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
-
           {/* Quarantine alert banner */}
           {batches.filter(b => b.status === 'quarantined').length > 0 && (
             <div style={{ gridColumn: '1 / -1', background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 12, padding: '14px 18px' }}>
@@ -405,10 +398,9 @@ export default function ERPDashboard() {
         </div>
       )}
 
-      {/* ── BATCH TRACKER ── */}
+      {/* BATCH TRACKER TAB */}
       {tab === 'batches' && (
         <div>
-          {/* Filters */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
             <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
               <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
@@ -475,7 +467,7 @@ export default function ERPDashboard() {
         </div>
       )}
 
-      {/* ── COGS REPORT ── */}
+      {/* COGS REPORT TAB */}
       {tab === 'cogs' && (
         <div>
           {!cogs ? (
@@ -484,7 +476,6 @@ export default function ERPDashboard() {
             </div>
           ) : (
             <>
-              {/* Summary banner */}
               <div style={{ background: `linear-gradient(135deg, ${M}, ${ML})`, borderRadius: 14, padding: '20px 24px', color: '#fff', marginBottom: 20, display: 'flex', gap: 32, flexWrap: 'wrap' }}>
                 {[
                   { label: 'Revenue Potential', value: fmt(cogs.summary?.totalRevenue) },
@@ -535,7 +526,7 @@ export default function ERPDashboard() {
         </div>
       )}
 
-      {/* ── AUDIT LOG ── */}
+      {/* AUDIT LOG TAB */}
       {tab === 'audit' && (
         <div>
           <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 12, color: '#9a3412', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -577,99 +568,102 @@ export default function ERPDashboard() {
         </div>
       )}
 
-      {/* ── BATCH DETAIL PANEL ── */}
+      {/* BATCH DETAIL PANEL */}
       {selected && (
-        <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 400, background: '#fff', boxShadow: '-4px 0 30px rgba(0,0,0,0.12)', zIndex: 200, overflowY: 'auto' }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
-            <div>
-              <div style={{ fontSize: 10, color: '#9ca3af', fontFamily: 'monospace', marginBottom: 2 }}>{selected.batchId}</div>
-              <h2 style={{ fontWeight: 800, fontSize: 15, color: '#1f2937', margin: 0 }}>{selected.productName}</h2>
-            </div>
-            <button onClick={() => setSelected(null)} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, padding: 6, cursor: 'pointer', display: 'flex' }}>
-              <X size={16} color="#6b7280" />
-            </button>
-          </div>
-
-          <div style={{ padding: '20px 24px' }}>
-            <div style={{ marginBottom: 16 }}>
-              <StatusBadge status={selected.status} />
-            </div>
-
-            {selected.status === 'quarantined' && (
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, color: '#dc2626', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <AlertTriangle size={13} /> Quarantine Reason
-                </div>
-                <div style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.5 }}>{selected.quarantineReason}</div>
+        <>
+          <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 400, background: '#fff', boxShadow: '-4px 0 30px rgba(0,0,0,0.12)', zIndex: 200, overflowY: 'auto' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+              <div>
+                <div style={{ fontSize: 10, color: '#9ca3af', fontFamily: 'monospace', marginBottom: 2 }}>{selected.batchId}</div>
+                <h2 style={{ fontWeight: 800, fontSize: 15, color: '#1f2937', margin: 0 }}>{selected.productName}</h2>
               </div>
-            )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
-              {[
-                ['Units Produced', selected.quantity],
-                ['Remaining', selected.remainingQuantity ?? selected.quantity],
-                ['Selling Price', fmt(selected.sellingPrice)],
-                ['Total COGS', fmt(selected.totalCOGS)],
-                ['Profit Margin', `${selected.profitMargin || 0}%`],
-                ['Ingredient Cost', fmt(selected.ingredientCost)],
-              ].map(([l, v]) => (
-                <div key={l} style={{ background: '#f9fafb', borderRadius: 8, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 10, color: '#9ca3af', marginBottom: 3 }}>{l}</div>
-                  <div style={{ fontWeight: 700, color: '#1f2937', fontSize: 14 }}>{v}</div>
-                </div>
-              ))}
+              <button onClick={() => setSelected(null)} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, padding: 6, cursor: 'pointer', display: 'flex' }}>
+                <X size={16} color="#6b7280" />
+              </button>
             </div>
 
-            {(selected.provenance || []).length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <h4 style={{ fontWeight: 700, marginBottom: 10, fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Thermometer size={13} color={M} /> Ingredient Provenance
-                </h4>
-                {selected.provenance.map((p, i) => (
-                  <div key={i} style={{ background: '#f0fdf4', borderRadius: 8, padding: '10px 12px', marginBottom: 6 }}>
-                    <div style={{ fontWeight: 600, fontSize: 12 }}>{p.ingredient}</div>
-                    <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{p.origin} · {p.supplierName}</div>
-                    {(p.certifications || []).length > 0 && (
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
-                        {p.certifications.map(c => (
-                          <span key={c} style={{ background: '#dcfce7', color: '#15803d', fontSize: 10, padding: '1px 7px', borderRadius: 999, fontWeight: 600 }}>{c}</span>
-                        ))}
-                      </div>
-                    )}
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{ marginBottom: 16 }}>
+                <StatusBadge status={selected.status} />
+              </div>
+
+              {selected.status === 'quarantined' && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
+                  <div style={{ fontWeight: 700, color: '#dc2626', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <AlertTriangle size={13} /> Quarantine Reason
+                  </div>
+                  <div style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.5 }}>{selected.quarantineReason}</div>
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
+                {[
+                  ['Units Produced', selected.quantity],
+                  ['Remaining', selected.remainingQuantity ?? selected.quantity],
+                  ['Selling Price', fmt(selected.sellingPrice)],
+                  ['Total COGS', fmt(selected.totalCOGS)],
+                  ['Profit Margin', `${selected.profitMargin || 0}%`],
+                  ['Ingredient Cost', fmt(selected.ingredientCost)],
+                ].map(([l, v]) => (
+                  <div key={l} style={{ background: '#f9fafb', borderRadius: 8, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 10, color: '#9ca3af', marginBottom: 3 }}>{l}</div>
+                    <div style={{ fontWeight: 700, color: '#1f2937', fontSize: 14 }}>{v}</div>
                   </div>
                 ))}
               </div>
-            )}
 
-            {(selected.billOfMaterials || []).length > 0 && (
-              <div>
-                <h4 style={{ fontWeight: 700, marginBottom: 10, fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Layers size={13} color={M} /> Bill of Materials
-                </h4>
-                <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#f9fafb' }}>
-                      {['Ingredient', 'Qty', 'Cost/Unit'].map(h => (
-                        <th key={h} style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: '#6b7280' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selected.billOfMaterials.map((item, i) => (
-                      <tr key={i} style={{ borderTop: '1px solid #f3f4f6' }}>
-                        <td style={{ padding: '6px 8px' }}>{item.ingredient}</td>
-                        <td style={{ padding: '6px 8px' }}>{item.quantity}{item.unit}</td>
-                        <td style={{ padding: '6px 8px', fontWeight: 600 }}>{fmt(item.costPerUnit)}</td>
+              {(selected.provenance || []).length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <h4 style={{ fontWeight: 700, marginBottom: 10, fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Thermometer size={13} color={M} /> Ingredient Provenance
+                  </h4>
+                  {selected.provenance.map((p, i) => (
+                    <div key={i} style={{ background: '#f0fdf4', borderRadius: 8, padding: '10px 12px', marginBottom: 6 }}>
+                      <div style={{ fontWeight: 600, fontSize: 12 }}>{p.ingredient}</div>
+                      <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{p.origin} · {p.supplierName}</div>
+                      {(p.certifications || []).length > 0 && (
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+                          {p.certifications.map(c => (
+                            <span key={c} style={{ background: '#dcfce7', color: '#15803d', fontSize: 10, padding: '1px 7px', borderRadius: 999, fontWeight: 600 }}>{c}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {(selected.billOfMaterials || []).length > 0 && (
+                <div>
+                  <h4 style={{ fontWeight: 700, marginBottom: 10, fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Layers size={13} color={M} /> Bill of Materials
+                  </h4>
+                  <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: '#f9fafb' }}>
+                        {['Ingredient', 'Qty', 'Cost/Unit'].map(h => (
+                          <th key={h} style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: '#6b7280' }}>{h}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody>
+                      {selected.billOfMaterials.map((item, i) => (
+                        <tr key={i} style={{ borderTop: '1px solid #f3f4f6' }}>
+                          <td style={{ padding: '6px 8px' }}>{item.ingredient}</td>
+                          <td style={{ padding: '6px 8px' }}>{item.quantity}{item.unit}</td>
+                          <td style={{ padding: '6px 8px', fontWeight: 600 }}>{fmt(item.costPerUnit)}</td>
+                          
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+          <div onClick={() => setSelected(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.2)', zIndex: 199 }} />
+        </>
       )}
-      {selected && <div onClick={() => setSelected(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.2)', zIndex: 199 }} />}
     </div>
   );
 }

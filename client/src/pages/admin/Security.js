@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { 
   ShieldCheck, ShieldAlert, EyeOff, Cpu, Database, RefreshCw, UserCheck, Play
 } from 'lucide-react';
+import api from '../../services/api';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-const tok = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 const R = '#4A0E2E';
 
 export default function Security() {
@@ -18,7 +16,7 @@ export default function Security() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/admin/erp/audit-log`, tok());
+      const res = await api.get('/admin/erp/audit-log');
       setAuditLog(res.data.logs || []);
     } catch (err) { console.error("Audit fetch failed:", err); }
     setLoading(false);
@@ -27,7 +25,7 @@ export default function Security() {
   const fetchPiiUsers = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/admin/users`, tok());
+      const res = await api.get('/admin/users');
       setPiiUsers(res.data || []);
     } catch (err) { console.error("PII fetch failed:", err); }
     setLoading(false);
@@ -37,7 +35,7 @@ export default function Security() {
     setLoading(true);
     setVibeData(null);
     try {
-      const res = await axios.get(`${API}/admin/sentiment-vibe`, tok());
+      const res = await api.get('/admin/sentiment-vibe');
       setVibeData(res.data);
     } catch (err) { console.error("NLP Analysis failed:", err); }
     setLoading(false);
@@ -134,7 +132,7 @@ export default function Security() {
               {piiUsers.map(u => {
                 // Mask email: sh***@gmail.com
                 const [localPart, domain] = (u.email || '').split('@');
-                const masked = localPart.length > 2
+                const masked = localPart && localPart.length > 2
                   ? localPart.slice(0, 2) + '***@' + domain
                   : '***@' + domain;
                 return (

@@ -9,13 +9,11 @@ import {
   BookOpen, Info, Disc, ArrowRight, Lock, 
   Smartphone, Share2, MousePointer2, RefreshCw 
 } from 'lucide-react';
+import api from '../services/api';  // Add this import
 
-const API = 'http://localhost:5000/api';
 const MAROON = '#4A0E2E';
 const GOLD = '#C9A84C';
 const CHAMPAGNE = '#FDFCFB';
-
-const tok = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 
 // Static Coupons for Boutique Promo Codes
 const STATIC_COUPONS = [
@@ -180,7 +178,7 @@ export default function Offers() {
 
   const fetchUserData = async () => {
     try {
-      const { data } = await axios.get(`${API}/auth/me`, tok());
+      const { data } = await api.get('/auth/me');
       setUserData(data);
       const today = new Date().toDateString();
       setCanSpin(data.lastSpinDate ? new Date(data.lastSpinDate).toDateString() !== today : true);
@@ -192,7 +190,7 @@ export default function Offers() {
 
   const handlePrizeAction = async (prize, type) => {
     try {
-      await axios.post(`${API}/auth/${type}`, { prize }, tok());
+      await api.post(`/auth/${type}`, { prize });
       fetchUserData();
       alert(`Glow Reward: ${prize.label} has been granted!`);
     } catch (e) { 
@@ -207,7 +205,7 @@ export default function Offers() {
       return;
     }
     try {
-      await axios.post(`${API}/auth/lucky-draw`, {}, tok());
+      await api.post('/auth/lucky-draw', {});
       fetchUserData();
       alert("✨ You've entered the Grand Lucky Draw!");
     } catch (e) { 

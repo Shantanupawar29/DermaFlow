@@ -8,9 +8,12 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 
-const API = 'http://localhost:5000/api';
-const M   = '#4A0E2E';
+// Update the import at the top
+import api from '../services/api';
 
+// Then replace the axios.post call in submitQuiz:
+
+const M = '#4A0E2E';
 // ── INGREDIENT BENEFIT MAP ────────────────────────────────────────────────────
 const INGREDIENT_INFO = {
   'Niacinamide':     { benefit: 'Minimises pores, controls oil, reduces redness', safe: ['oily','combination','sensitive'] },
@@ -210,20 +213,23 @@ const Quiz = () => {
     else submitQuiz();
   };
 
-  const submitQuiz = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(`${API}/quiz/submit`, answers, { headers: { Authorization: `Bearer ${token}` } });
-      setRecommendations(res.data);
-      setQuizCompleted(true);
-      localStorage.setItem('quizCompleted', 'true');
-    } catch(e) {
-      if (e.response?.status === 401) { alert('Please log in to save your routine.'); navigate('/login'); }
-      else alert('Something went wrong. Please try again.');
+const submitQuiz = async () => {
+  setLoading(true);
+  try {
+    const token = localStorage.getItem('token');
+    const res = await api.post('/quiz/submit', answers);
+    setRecommendations(res.data);
+    setQuizCompleted(true);
+    localStorage.setItem('quizCompleted', 'true');
+  } catch(e) {
+    if (e.response?.status === 401) { 
+      alert('Please log in to save your routine.'); 
+      navigate('/login'); 
     }
-    setLoading(false);
-  };
+    else alert('Something went wrong. Please try again.');
+  }
+  setLoading(false);
+};
 
   const addToCart = (product) => {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');

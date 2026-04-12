@@ -1,13 +1,11 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { Heart, ShoppingBag, Star, Check, ChevronDown, ChevronUp, ThumbsUp, AlertTriangle, Package, Box } from 'lucide-react';
+import api from '../services/api';
 
-const API = 'http://localhost:5000/api';
-const M = '#4A0E2E';
-const tok = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+const MAROON = '#4A0E2E';
 
 // Lazy load ModelViewer to avoid Three.js issues
 const ModelViewer = React.lazy(() => import('../components/ModelViewer'));
@@ -66,8 +64,8 @@ export default function ProductDetail() {
     const fetch = async () => {
       try {
         const [pRes, rRes] = await Promise.all([
-          axios.get(`${API}/products/${id}`),
-          axios.get(`${API}/reviews/product/${id}?sort=${reviewSort}&page=${reviewPage}`),
+          api.get(`/products/${id}`),
+          api.get(`/reviews/product/${id}?sort=${reviewSort}&page=${reviewPage}`),
         ]);
         setProduct(pRes.data);
         setReviews(rRes.data.reviews || []);
@@ -81,7 +79,7 @@ export default function ProductDetail() {
 
   useEffect(() => {
     if (user) {
-      axios.get(`${API}/auth/me`, tok()).then(r => {
+      api.get('/auth/me').then(r => {
         setWishlisted((r.data.wishlist || []).some(p => (p._id || p) === id));
       }).catch(() => { });
     }
@@ -90,7 +88,7 @@ export default function ProductDetail() {
   const toggleWishlist = async () => {
     if (!user) { alert('Please login to add to wishlist'); return; }
     try {
-      const r = await axios.post(`${API}/auth/wishlist/${id}`, {}, tok());
+      await api.post(`/auth/wishlist/${id}`);
       setWishlisted(prev => !prev);
     } catch (e) { alert('Failed'); }
   };
@@ -106,10 +104,10 @@ export default function ProductDetail() {
     if (!newReview.comment.trim()) { alert('Please write a review comment'); return; }
     setSubmitting(true);
     try {
-      await axios.post(`${API}/reviews`, { productId: id, ...newReview }, tok());
+      await api.post('/reviews', { productId: id, ...newReview });
       setShowReviewForm(false);
       setNewReview({ rating: 5, title: '', comment: '' });
-      const r = await axios.get(`${API}/reviews/product/${id}?sort=${reviewSort}`);
+      const r = await api.get(`/reviews/product/${id}?sort=${reviewSort}`);
       setReviews(r.data.reviews || []);
       setStats(r.data.stats || {});
       setTotal(r.data.total || 0);
@@ -119,7 +117,7 @@ export default function ProductDetail() {
   };
 
   if (loading) return <div style={{ padding: '4rem', textAlign: 'center', color: '#6b7280' }}>Loading...</div>;
-  if (!product) return <div style={{ padding: '4rem', textAlign: 'center' }}><Link to="/products" style={{ color: M }}>← Back</Link></div>;
+  if (!product) return <div style={{ padding: '4rem', textAlign: 'center' }}><Link to="/products" style={{ color: MAROON }}>← Back</Link></div>;
 
   const inStock = product.stockQuantity > 0;
   const discountedPrice = product.discountPercentage > 0
@@ -132,7 +130,7 @@ export default function ProductDetail() {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2.5rem 1rem', fontFamily: 'system-ui,sans-serif' }}>
-      <Link to="/products" style={{ color: M, textDecoration: 'none', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 20 }}>
+      <Link to="/products" style={{ color: MAROON, textDecoration: 'none', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 20 }}>
         ← Back to Products
       </Link>
 
@@ -161,7 +159,7 @@ export default function ProductDetail() {
                   cursor: 'pointer',
                   fontWeight: 600,
                   fontSize: 13,
-                  background: !show3D ? M : '#f3f4f6',
+                  background: !show3D ? MAROON : '#f3f4f6',
                   color: !show3D ? '#fff' : '#6b7280'
                 }}
               >
@@ -181,7 +179,7 @@ export default function ProductDetail() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 6,
-                  background: show3D ? M : '#f3f4f6',
+                  background: show3D ? MAROON : '#f3f4f6',
                   color: show3D ? '#fff' : '#6b7280'
                 }}
               >
@@ -201,7 +199,7 @@ export default function ProductDetail() {
               {product.images?.[0] ? (
                 <img src={product.images[0]} alt={product.name} style={{ width: '100%', borderRadius: 16, objectFit: 'cover', aspectRatio: '1/1', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }} />
               ) : (
-                <div style={{ background: '#F5E8EA', borderRadius: 16, aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: M, fontWeight: 700, fontSize: '1.25rem', textAlign: 'center', padding: '2rem' }}>
+                <div style={{ background: '#F5E8EA', borderRadius: 16, aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: MAROON, fontWeight: 700, fontSize: '1.25rem', textAlign: 'center', padding: '2rem' }}>
                   {product.name}
                 </div>
               )}
@@ -214,12 +212,13 @@ export default function ProductDetail() {
           )}
         </div>
 
-        {/* Details */}
+        {/* Details - rest of the component remains the same */}
         <div>
+          {/* ... keep the same JSX from your original ProductDetail ... */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
             {[
               { label: product.category === 'skin' ? 'Skincare' : 'Haircare', color: '#0F6E56' },
-              product.routineTime && { label: product.routineTime === 'both' ? 'AM & PM' : product.routineTime + ' Routine', color: M },
+              product.routineTime && { label: product.routineTime === 'both' ? 'AM & PM' : product.routineTime + ' Routine', color: MAROON },
               has3DModel && { label: '3D View Available', color: '#7c3aed' },
             ].filter(Boolean).map(b => (
               <span key={b.label} style={{ background: b.color, color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999 }}>{b.label}</span>
@@ -242,7 +241,7 @@ export default function ProductDetail() {
           <p style={{ color: '#6b7280', lineHeight: 1.8, fontSize: 14, marginBottom: 20 }}>{product.description}</p>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 20 }}>
-            <span style={{ fontSize: '2rem', fontWeight: 800, color: M }}>₹{discountedPrice.toLocaleString('en-IN')}</span>
+            <span style={{ fontSize: '2rem', fontWeight: 800, color: MAROON }}>₹{discountedPrice.toLocaleString('en-IN')}</span>
             {product.discountPercentage > 0 && (
               <span style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: 14 }}>₹{product.price.toLocaleString('en-IN')}</span>
             )}
@@ -256,7 +255,7 @@ export default function ProductDetail() {
           </div>
 
           <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-            <button onClick={handleAddToCart} disabled={!inStock} style={{ flex: 1, background: inStock ? M : '#d1d5db', color: '#fff', border: 'none', borderRadius: 10, padding: '14px', fontWeight: 700, cursor: inStock ? 'pointer' : 'not-allowed', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <button onClick={handleAddToCart} disabled={!inStock} style={{ flex: 1, background: inStock ? MAROON : '#d1d5db', color: '#fff', border: 'none', borderRadius: 10, padding: '14px', fontWeight: 700, cursor: inStock ? 'pointer' : 'not-allowed', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               {added ? <><Check size={16} /> Added!</> : <><ShoppingBag size={16} /> {inStock ? 'Add to Cart' : 'Out of Stock'}</>}
             </button>
             <button onClick={toggleWishlist} style={{ width: 50, height: 50, background: wishlisted ? '#fef2f2' : '#f3f4f6', border: `1.5px solid ${wishlisted ? '#fca5a5' : '#e5e7eb'}`, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -290,7 +289,7 @@ export default function ProductDetail() {
         </div>
       </div>
 
-      {/* Reviews Section */}
+      {/* Reviews Section - keep the same as original */}
       <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
           <h2 style={{ fontWeight: 800, fontSize: 18, color: '#1f2937', margin: 0 }}>Customer Reviews</h2>
@@ -302,7 +301,7 @@ export default function ProductDetail() {
               <option value="lowest">Lowest Rated</option>
             </select>
             {user && (
-              <button onClick={() => setShowReviewForm(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: M, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+              <button onClick={() => setShowReviewForm(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: MAROON, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
                 <Star size={13} /> Write a Review
               </button>
             )}
@@ -327,8 +326,8 @@ export default function ProductDetail() {
 
         {/* Review form */}
         {showReviewForm && (
-          <div style={{ background: '#fff', border: `1.5px solid ${M}30`, borderRadius: 14, padding: 24, marginBottom: 24 }}>
-            <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: M }}>Write Your Review — Earn 25 Glow Points</h3>
+          <div style={{ background: '#fff', border: `1.5px solid ${MAROON}30`, borderRadius: 14, padding: 24, marginBottom: 24 }}>
+            <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: MAROON }}>Write Your Review — Earn 25 Glow Points</h3>
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>Your Rating *</label>
               <StarRating value={newReview.rating} onChange={r => setNewReview(p => ({ ...p, rating: r }))} size={28} />
@@ -342,7 +341,7 @@ export default function ProductDetail() {
               <textarea value={newReview.comment} onChange={e => setNewReview(p => ({ ...p, comment: e.target.value }))} rows={4} placeholder="How did it work for your skin? What did you like or dislike?" style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 13, boxSizing: 'border-box', outline: 'none', resize: 'vertical' }} />
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={submitReview} disabled={submitting} style={{ flex: 1, background: M, color: '#fff', border: 'none', borderRadius: 8, padding: '10px', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+              <button onClick={submitReview} disabled={submitting} style={{ flex: 1, background: MAROON, color: '#fff', border: 'none', borderRadius: 8, padding: '10px', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
                 {submitting ? 'Submitting...' : 'Submit Review (+25 Glow Points)'}
               </button>
               <button onClick={() => setShowReviewForm(false)} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, padding: '10px 16px', cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cancel</button>
@@ -379,8 +378,8 @@ export default function ProductDetail() {
                 {rev.title && <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6, color: '#1f2937' }}>{rev.title}</div>}
                 <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, margin: '0 0 10px' }}>{rev.comment}</p>
                 {rev.adminReply && (
-                  <div style={{ background: '#f9fafb', borderRadius: 8, padding: '10px 14px', borderLeft: `3px solid ${M}`, marginBottom: 10 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: M, marginBottom: 4 }}>Response from DermaFlow</div>
+                  <div style={{ background: '#f9fafb', borderRadius: 8, padding: '10px 14px', borderLeft: `3px solid ${MAROON}`, marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: MAROON, marginBottom: 4 }}>Response from DermaFlow</div>
                     <div style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.6 }}>{rev.adminReply}</div>
                   </div>
                 )}
@@ -390,7 +389,7 @@ export default function ProductDetail() {
                   </div>
                 )}
                 <div style={{ display: 'flex', justify: 'flex-end', marginTop: 8 }}>
-                  <button onClick={async () => { await axios.post(`${API}/reviews/${rev._id}/helpful`, {}, tok()); }} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid #e5e7eb', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 11, color: '#6b7280' }}>
+                  <button onClick={async () => { await api.post(`/reviews/${rev._id}/helpful`, {}); }} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid #e5e7eb', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 11, color: '#6b7280' }}>
                     <ThumbsUp size={12} /> Helpful ({rev.helpful || 0})
                   </button>
                 </div>
@@ -401,7 +400,7 @@ export default function ProductDetail() {
             {totalReviews > 10 && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
                 <button onClick={() => setReviewPage(p => Math.max(1, p - 1))} disabled={reviewPage === 1} style={{ background: '#f3f4f6', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Previous</button>
-                <button onClick={() => setReviewPage(p => p + 1)} disabled={reviews.length < 10} style={{ background: M, color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Next</button>
+                <button onClick={() => setReviewPage(p => p + 1)} disabled={reviews.length < 10} style={{ background: MAROON, color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Next</button>
               </div>
             )}
           </div>

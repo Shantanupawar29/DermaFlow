@@ -1,35 +1,32 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-
-const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
-const token = () => localStorage.getItem("token");
+import api from '../../services/api';
 
 const TIER_COLORS = {
-  bronze:   { bg: "#fdf4e7", color: "#d97706" },
-  silver:   { bg: "#f3f4f6", color: "#6b7280" },
-  gold:     { bg: "#fefce8", color: "#d97706" },
+  bronze: { bg: "#fdf4e7", color: "#d97706" },
+  silver: { bg: "#f3f4f6", color: "#6b7280" },
+  gold: { bg: "#fefce8", color: "#d97706" },
   platinum: { bg: "#ede9fe", color: "#7c3aed" },
 };
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
-  const [total,     setTotal]     = useState(0);
-  const [search,    setSearch]    = useState("");
-  const [tier,      setTier]      = useState("");
-  const [loading,   setLoading]   = useState(true);
+  const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState("");
+  const [tier, setTier] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (search) params.append("search", search);
-    if (tier)   params.append("tier", tier);
-    axios.get(`${API}/customers?${params}`, { headers: { Authorization: `Bearer ${token()}` } })
+    if (tier) params.append("tier", tier);
+    api.get(`/customers?${params}`)
       .then(r => { setCustomers(r.data.customers); setTotal(r.data.total); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [search, tier]);
 
-  const fmt = v => `₹${(v / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  const fmt = v => `₹${(v).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
   return (
     <div>
@@ -42,7 +39,7 @@ export default function Customers() {
         <select value={tier} onChange={e => setTier(e.target.value)}
           style={{ border: "1px solid #e5e7eb", borderRadius: "0.5rem", padding: "0.5rem 0.875rem", fontSize: "0.875rem" }}>
           <option value="">All Tiers</option>
-          {["bronze","silver","gold","platinum"].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
+          {["bronze", "silver", "gold", "platinum"].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
         </select>
       </div>
 
@@ -53,10 +50,10 @@ export default function Customers() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
             <thead>
               <tr style={{ background: "#f9fafb" }}>
-                {["Customer","Skin Type","Orders","Total Spent","Glow Points","Tier","Member Since"].map(h => (
+                {["Customer", "Skin Type", "Orders", "Total Spent", "Glow Points", "Tier", "Member Since"].map(h => (
                   <th key={h} style={{ padding: "0.75rem 1rem", textAlign: "left", fontWeight: 600, color: "#374151" }}>{h}</th>
                 ))}
-              </tr>
+               </tr>
             </thead>
             <tbody>
               {customers.map(c => {

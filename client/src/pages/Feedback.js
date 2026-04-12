@@ -1,22 +1,21 @@
 import { useState } from 'react';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-const R   = '#7B2D3C';
+const R = '#7B2D3C';
 
-const TYPES     = ['review','complaint','suggestion','support','survey'];
-const CATEGORIES = ['payment','delivery','product_quality','website','customer_service','other'];
+const TYPES = ['review', 'complaint', 'suggestion', 'support', 'survey'];
+const CATEGORIES = ['payment', 'delivery', 'product_quality', 'website', 'customer_service', 'other'];
 
 export default function FeedbackPage() {
   const { user } = useAuth();
-  const [form, setForm]       = useState({
+  const [form, setForm] = useState({
     type: 'review', category: 'other', rating: 5,
     subject: '', message: '', name: user?.name || '', email: user?.email || '',
   });
-  const [loading,   setLoading]   = useState(false);
+  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(null);
-  const [error,     setError]     = useState('');
+  const [error, setError] = useState('');
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -25,8 +24,7 @@ export default function FeedbackPage() {
     if (!form.message.trim()) { setError('Please enter your message.'); return; }
     setLoading(true); setError('');
     try {
-      const headers = user ? { Authorization: `Bearer ${localStorage.getItem('token')}` } : {};
-      const { data } = await axios.post(`${API}/feedback`, form, { headers });
+      const { data } = await api.post('/feedback', form);
       setSubmitted(data);
     } catch (err) {
       setError(err.response?.data?.message || 'Submission failed. Please try again.');
@@ -71,39 +69,36 @@ export default function FeedbackPage() {
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-        {/* Type & Category */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
           <div>
             <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '0.3rem' }}>Feedback Type</label>
             <select value={form.type} onChange={set('type')} style={input}>
-              {TYPES.map(t => <option key={t} value={t} style={{ textTransform: 'capitalize' }}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
+              {TYPES.map(t => <option key={t} value={t} style={{ textTransform: 'capitalize' }}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
             </select>
           </div>
           <div>
             <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '0.3rem' }}>Category</label>
             <select value={form.category} onChange={set('category')} style={input}>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c.replace('_',' ')}</option>)}
+              {CATEGORIES.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
             </select>
           </div>
         </div>
 
-        {/* Rating (only for reviews) */}
         {form.type === 'review' && (
           <div>
             <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '0.5rem' }}>Rating</label>
             <div style={{ display: 'flex', gap: '0.4rem' }}>
-              {[1,2,3,4,5].map(n => (
-                <button key={n} type="button" onClick={() => setForm(f => ({...f, rating: n}))}
+              {[1, 2, 3, 4, 5].map(n => (
+                <button key={n} type="button" onClick={() => setForm(f => ({ ...f, rating: n }))}
                   style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid', borderColor: form.rating >= n ? '#d97706' : '#e5e7eb', background: form.rating >= n ? '#fef3c7' : '#fff', cursor: 'pointer', fontSize: '1.1rem' }}>
                   {form.rating >= n ? '★' : '☆'}
                 </button>
               ))}
-              <span style={{ alignSelf: 'center', fontSize: '0.85rem', color: '#6b7280' }}>{['','Terrible','Poor','Average','Good','Excellent'][form.rating]}</span>
+              <span style={{ alignSelf: 'center', fontSize: '0.85rem', color: '#6b7280' }}>{['', 'Terrible', 'Poor', 'Average', 'Good', 'Excellent'][form.rating]}</span>
             </div>
           </div>
         )}
 
-        {/* Name & Email (if not logged in) */}
         {!user && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div>
@@ -117,13 +112,11 @@ export default function FeedbackPage() {
           </div>
         )}
 
-        {/* Subject */}
         <div>
           <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '0.3rem' }}>Subject</label>
           <input placeholder="Brief summary of your feedback" value={form.subject} onChange={set('subject')} style={input} />
         </div>
 
-        {/* Message */}
         <div>
           <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '0.3rem' }}>Message <span style={{ color: '#dc2626' }}>*</span></label>
           <textarea rows={5} placeholder="Tell us in detail..." value={form.message} onChange={set('message')} required

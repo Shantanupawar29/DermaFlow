@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
 import LocationDetector from '../components/LocationDetector';
+import api from '../services/api';
 
 const Checkout = () => {
   const { cartItems, totalPrice, clearCart } = useCart();
@@ -32,10 +32,7 @@ const Checkout = () => {
 
   const fetchSavedAddresses = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/profile/addresses', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/profile/addresses');
       setSavedAddresses(response.data || []);
       
       // Set default address if exists
@@ -87,7 +84,7 @@ const Checkout = () => {
   const fetchAddressFromPincode = async (pincode) => {
     if (!/^\d{6}$/.test(pincode)) return;
     try {
-      const res = await axios.get(`http://localhost:5000/api/pincode/${pincode}`);
+      const res = await api.get(`/pincode/${pincode}`);
       const data = res.data[0];
       if (data.Status === "Success" && data.PostOffice?.length > 0) {
         const postOffice = data.PostOffice[0];
@@ -154,10 +151,7 @@ const Checkout = () => {
 
   const createOrderAndRedirect = async (orderData) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/orders', orderData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      
+      const response = await api.post('/orders', orderData);
       const orderId = response.data._id;
       clearCart();
       navigate(`/order-confirmation/${orderId}`);
@@ -180,11 +174,7 @@ const Checkout = () => {
       
       const amountInPaise = Math.round(grandTotal * 100);
       
-      const { data: razorpayOrder } = await axios.post(
-        'http://localhost:5000/api/payment/create-order',
-        { amount: amountInPaise },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-      );
+      const { data: razorpayOrder } = await api.post('/payment/create-order', { amount: amountInPaise });
 
       if (!razorpayOrder.id) {
         alert('Failed to create payment order. Please try again.');
@@ -207,15 +197,11 @@ const Checkout = () => {
         theme: { color: '#4A0E2E' },
         handler: async (response) => {
           try {
-            const verifyRes = await axios.post(
-              'http://localhost:5000/api/payment/verify',
-              {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              },
-              { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-            );
+            const verifyRes = await api.post('/payment/verify', {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
 
             if (verifyRes.data.success) {
               const orderData = {
@@ -392,21 +378,21 @@ const Checkout = () => {
               {useNewAddress && (
                 <div className="space-y-4">
                   <LocationDetector 
-  onAddressFetched={(address) => {
-    setFormData(prev => ({
-      ...prev,
-      address: {
-        ...prev.address,
-        street: address.street || prev.address.street,
-        city: address.city || prev.address.city,
-        state: address.state || prev.address.state,
-        zipCode: address.zipCode || prev.address.zipCode,
-        country: address.country || prev.address.country
-      }
-    }));
-  }}
-  buttonText="Use My Current Location"
-/>
+                    onAddressFetched={(address) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        address: {
+                          ...prev.address,
+                          street: address.street || prev.address.street,
+                          city: address.city || prev.address.city,
+                          state: address.state || prev.address.state,
+                          zipCode: address.zipCode || prev.address.zipCode,
+                          country: address.country || prev.address.country
+                        }
+                      }));
+                    }}
+                    buttonText="Use My Current Location"
+                  />
                   
                   <div className="grid md:grid-cols-2 gap-4">
                     <input type="text" placeholder="Street Address" required className="border p-2 rounded"

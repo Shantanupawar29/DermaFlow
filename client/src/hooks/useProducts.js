@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 export const useProducts = (filters = {}) => {
   const [products, setProducts] = useState([]);
@@ -10,7 +10,7 @@ export const useProducts = (filters = {}) => {
     const fetchProducts = async () => {
       try {
         const params = new URLSearchParams(filters);
-        const response = await axios.get(`http://localhost:5000/api/products?${params}`);
+        const response = await api.get(`/products?${params}`);
         setProducts(response.data.products);
       } catch (err) {
         setError(err.message);

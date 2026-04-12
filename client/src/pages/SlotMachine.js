@@ -2,14 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Zap, RefreshCw, Trophy, Clock, Star, Diamond, Info, Sparkles } from 'lucide-react';
-import axios from 'axios';
+import api from '../services/api';
 
-const API = 'http://localhost:5000/api';
 const MAROON = '#4A0E2E';
 const GOLD = '#C9A84C';
 const OFF_WHITE = '#FDFCFB';
-
-const tok = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 
 // Updated Symbols to match Skincare Theme
 const SYMBOLS = ['🌿', '🧴', '✨', '💧', '🌸', '💎', '⭐', '🧬'];
@@ -54,7 +51,6 @@ function Reel({ symbol, spinning, delay }) {
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Decorative inner border */}
       <div style={{ position: 'absolute', inset: 6, border: `1px solid ${GOLD}15`, borderRadius: 12 }} />
       <span style={{ filter: spinning ? 'blur(2px)' : 'none', transition: 'filter 0.2s' }}>
         {display}
@@ -72,8 +68,10 @@ export default function SlotMachine() {
   const [userData, setUserData] = useState(null);
   const [timeUntilMidnight, setTimeUntilMidnight] = useState('');
 
-  // ... fetchUserData and updateTimer logic remain the same ...
-  useEffect(() => { if (user) fetchUserData(); }, [user]);
+  useEffect(() => { 
+    if (user) fetchUserData(); 
+  }, [user]);
+  
   useEffect(() => {
     if (!userData) return;
     const interval = setInterval(updateTimer, 1000);
@@ -82,7 +80,7 @@ export default function SlotMachine() {
 
   const fetchUserData = async () => {
     try {
-      const { data } = await axios.get(`${API}/auth/me`, tok());
+      const { data } = await api.get('/auth/me');
       setUserData(data);
       const today = new Date().toDateString();
       const lastSlot = data.lastSlotDate ? new Date(data.lastSlotDate).toDateString() : null;
@@ -114,7 +112,6 @@ export default function SlotMachine() {
     let newReels;
     let winPayout = null;
 
-    // Logic for win probabilities (using your weights)
     if (rand < 0.05) { newReels = ['💎','💎','💎']; winPayout = PAYOUTS['💎💎💎']; }
     else if (rand < 0.15) { newReels = ['🧴','🧴','🧴']; winPayout = PAYOUTS['🧴🧴🧴']; }
     else {
@@ -125,10 +122,10 @@ export default function SlotMachine() {
     setSpin(false);
 
     try {
-      const response = await axios.post(`${API}/auth/slot-win`, { 
+      const response = await api.post('/auth/slot-win', { 
         pts: winPayout ? winPayout.pts : 0, 
         symbols: winPayout ? newReels.join('') : 'NO_WIN' 
-      }, tok());
+      });
       if (winPayout) setResult(winPayout);
       setUserData(prev => ({ ...prev, glowPoints: response.data.glowPoints }));
     } catch(e) { console.error(e); }
@@ -137,7 +134,6 @@ export default function SlotMachine() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: OFF_WHITE, color: '#333', paddingBottom: '4rem' }}>
       
-      {/* Premium Header */}
       <header style={{ textAlign: 'center', padding: '4rem 1rem 2rem' }}>
         <h1 style={{ 
           fontFamily: "'Cormorant Garamond', serif", 
@@ -155,7 +151,6 @@ export default function SlotMachine() {
 
       <main style={{ maxWidth: '600px', margin: '0 auto', padding: '0 1.5rem' }}>
         
-        {/* Machine Housing */}
         <div style={{ 
           background: '#fff', 
           borderRadius: '32px', 
@@ -165,7 +160,6 @@ export default function SlotMachine() {
           textAlign: 'center'
         }}>
           
-          {/* Status Bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', fontSize: '0.9rem' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Sparkles size={16} color={GOLD} />
@@ -176,7 +170,6 @@ export default function SlotMachine() {
             </span>
           </div>
 
-          {/* Reel Container */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -190,7 +183,6 @@ export default function SlotMachine() {
             {reels.map((s, i) => <Reel key={i} symbol={s} spinning={spinning} delay={i * 150} />)}
           </div>
 
-          {/* Win Announcement */}
           <div style={{ height: '60px', marginBottom: '1rem' }}>
             {result && !spinning && (
               <div style={{ animation: 'fadeInUp 0.5s ease' }}>
@@ -200,7 +192,6 @@ export default function SlotMachine() {
             )}
           </div>
 
-          {/* Luxury Spin Button */}
           <button
             onClick={spin}
             disabled={!user || creditsLeft <= 0 || spinning}
@@ -225,7 +216,6 @@ export default function SlotMachine() {
           </button>
         </div>
 
-        {/* Prize Table - Elegant Cards */}
         <div style={{ marginTop: '3rem' }}>
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1.8rem', color: MAROON, marginBottom: '1.5rem' }}>
             Prize Legend

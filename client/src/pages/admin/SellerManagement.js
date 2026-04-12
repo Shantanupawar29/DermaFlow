@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Users, Plus, Edit, Trash2, Star, Truck, Package, Mail, Phone } from 'lucide-react';
-
-const API_URL = 'http://localhost:5000/api';
-const token = () => localStorage.getItem('token');
+import api from '../../services/api';
 
 export default function SellerManagement() {
   const [suppliers, setSuppliers] = useState([]);
@@ -22,9 +19,7 @@ export default function SellerManagement() {
 
   const fetchSuppliers = async () => {
     try {
-      const response = await axios.get(`${API_URL}/scm/suppliers`, {
-        headers: { Authorization: `Bearer ${token()}` }
-      });
+      const response = await api.get('/scm/suppliers');
       setSuppliers(response.data);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
@@ -37,13 +32,9 @@ export default function SellerManagement() {
     e.preventDefault();
     try {
       if (editingSupplier) {
-        await axios.put(`${API_URL}/scm/suppliers/${editingSupplier._id}`, formData, {
-          headers: { Authorization: `Bearer ${token()}` }
-        });
+        await api.put(`/scm/suppliers/${editingSupplier._id}`, formData);
       } else {
-        await axios.post(`${API_URL}/scm/suppliers/register`, formData, {
-          headers: { Authorization: `Bearer ${token()}` }
-        });
+        await api.post('/scm/suppliers/register', formData);
       }
       fetchSuppliers();
       setShowModal(false);

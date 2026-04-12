@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
 import {
   Package, Search, Filter, RefreshCw, ChevronDown,
   Truck, CheckCircle, XCircle, Clock, Eye, TrendingUp
 } from 'lucide-react';
+import api from '../../services/api';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-const M   = '#4A0E2E';
-const tok = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+const M = '#4A0E2E';
 const fmt = v => '₹' + (v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
 const STATUS = {
@@ -18,28 +16,28 @@ const STATUS = {
   delivered:  { bg: '#dcfce7', c: '#15803d', border: '#86efac', label: 'Delivered',  Icon: CheckCircle },
   cancelled:  { bg: '#fef2f2', c: '#dc2626', border: '#fca5a5', label: 'Cancelled',  Icon: XCircle },
 };
-const STATUS_LIST = ['pending','processing','confirmed','shipped','delivered','cancelled'];
+const STATUS_LIST = ['pending', 'processing', 'confirmed', 'shipped', 'delivered', 'cancelled'];
 
 export default function Orders() {
-  const [orders, setOrders]       = useState([]);
-  const [total, setTotal]         = useState(0);
+  const [orders, setOrders] = useState([]);
+  const [total, setTotal] = useState(0);
   const [statusFilter, setStatus] = useState('');
-  const [search, setSearch]       = useState('');
-  const [page, setPage]           = useState(1);
-  const [loading, setLoading]     = useState(true);
-  const [expanded, setExpanded]   = useState(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null);
   const [trackingInput, setTracking] = useState({});
-  const [updating, setUpdating]   = useState(null);
+  const [updating, setUpdating] = useState(null);
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: 15 });
       if (statusFilter) params.append('status', statusFilter);
-      const r = await axios.get(`${API}/orders?${params}`, tok());
+      const r = await api.get(`/orders?${params}`);
       setOrders(r.data.orders || r.data);
       setTotal(r.data.total || (r.data.orders || r.data).length);
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
 
@@ -49,20 +47,18 @@ export default function Orders() {
     setUpdating(id);
     try {
       const tracking = trackingInput[id] || '';
-      await axios.put(`${API}/orders/${id}/status`, { status: newStatus, trackingNumber: tracking }, tok());
+      await api.put(`/orders/${id}/status`, { status: newStatus, trackingNumber: tracking });
       setOrders(prev => prev.map(o => o._id === id ? { ...o, status: newStatus, trackingNumber: tracking || o.trackingNumber } : o));
-      // If shipped/delivered, email is auto-sent by backend
       if (newStatus === 'shipped') alert(`Order marked as shipped. Shipping confirmation email sent to customer automatically.`);
       if (newStatus === 'delivered') alert(`Order marked as delivered. Delivery email + review request sent to customer.`);
-    } catch(e) { alert('Failed to update: ' + (e.response?.data?.message || e.message)); }
+    } catch (e) { alert('Failed to update: ' + (e.response?.data?.message || e.message)); }
     setUpdating(null);
   };
 
   const filtered = search
-    ? orders.filter(o => (o.orderNumber||'').toLowerCase().includes(search.toLowerCase()) || (o.user?.name||'').toLowerCase().includes(search.toLowerCase()) || (o.user?.email||'').toLowerCase().includes(search.toLowerCase()))
+    ? orders.filter(o => (o.orderNumber || '').toLowerCase().includes(search.toLowerCase()) || (o.user?.name || '').toLowerCase().includes(search.toLowerCase()) || (o.user?.email || '').toLowerCase().includes(search.toLowerCase()))
     : orders;
 
-  // Revenue summary for visible orders
   const visibleRevenue = filtered.reduce((s, o) => s + (o.grandTotal || 0), 0);
 
   return (
@@ -76,16 +72,16 @@ export default function Orders() {
           </p>
         </div>
         <button onClick={fetchOrders} style={{ background: '#f3f4f6', border: 'none', borderRadius: 9, padding: '8px 12px', cursor: 'pointer', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
-          <RefreshCw size={13}/> Refresh
+          <RefreshCw size={13} /> Refresh
         </button>
       </div>
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}/>
+          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search order, name, email..."
-            style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px 8px 30px', fontSize: 13, boxSizing: 'border-box', outline: 'none', background: '#fafafa' }}/>
+            style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px 8px 30px', fontSize: 13, boxSizing: 'border-box', outline: 'none', background: '#fafafa' }} />
         </div>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {['', ...STATUS_LIST].map(s => {
@@ -106,9 +102,9 @@ export default function Orders() {
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
           { label: 'Total Orders', value: total, color: M },
-          { label: 'Pending',   value: orders.filter(o=>o.status==='pending').length,   color: '#d97706' },
-          { label: 'Shipped',   value: orders.filter(o=>o.status==='shipped').length,   color: '#0d9488' },
-          { label: 'Delivered', value: orders.filter(o=>o.status==='delivered').length, color: '#15803d' },
+          { label: 'Pending', value: orders.filter(o => o.status === 'pending').length, color: '#d97706' },
+          { label: 'Shipped', value: orders.filter(o => o.status === 'shipped').length, color: '#0d9488' },
+          { label: 'Delivered', value: orders.filter(o => o.status === 'delivered').length, color: '#15803d' },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 12, padding: '12px 18px', flex: 1, minWidth: 100, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
             <div style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
@@ -121,12 +117,12 @@ export default function Orders() {
       <div style={{ background: '#fff', border: '1px solid #f0f0f0', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
         {loading ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }}/> Loading orders...
+            <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Loading orders...
             <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>
-            <Package size={32} color="#e5e7eb" style={{ margin: '0 auto 10px', display: 'block' }}/>
+            <Package size={32} color="#e5e7eb" style={{ margin: '0 auto 10px', display: 'block' }} />
             <p>No orders found.</p>
           </div>
         ) : (
@@ -143,8 +139,8 @@ export default function Orders() {
                 const st = STATUS[o.status] || STATUS.pending;
                 const isExpanded = expanded === o._id;
                 return (
-                  <>
-                    <tr key={o._id} style={{ borderTop: '1px solid #f9fafb', cursor: 'pointer' }}
+                  <React.Fragment key={o._id}>
+                    <tr style={{ borderTop: '1px solid #f9fafb', cursor: 'pointer' }}
                       onClick={() => setExpanded(isExpanded ? null : o._id)}
                       onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
                       onMouseLeave={e => e.currentTarget.style.background = ''}>
@@ -171,12 +167,12 @@ export default function Orders() {
                             style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: '4px 8px', fontSize: 11, cursor: 'pointer', outline: 'none', background: '#fff' }}>
                             {STATUS_LIST.map(s => <option key={s} value={s}>{STATUS[s]?.label}</option>)}
                           </select>
-                          {updating === o._id && <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite', color: '#9ca3af' }}/>}
+                          {updating === o._id && <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite', color: '#9ca3af' }} />}
                         </div>
-                      </td>
+                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr key={`${o._id}-expand`} style={{ borderTop: '1px solid #f0f0f0', background: '#fafafa' }}>
+                      <tr style={{ borderTop: '1px solid #f0f0f0', background: '#fafafa' }}>
                         <td colSpan={7} style={{ padding: '14px 20px' }}>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                             {/* Items */}
@@ -199,8 +195,8 @@ export default function Orders() {
                               <div style={{ fontWeight: 700, fontSize: 11, color: '#6b7280', textTransform: 'uppercase', marginBottom: 8 }}>Shipping Address</div>
                               {o.shippingAddress ? (
                                 <div style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.7 }}>
-                                  {o.shippingAddress.street}<br/>
-                                  {o.shippingAddress.city}, {o.shippingAddress.state}<br/>
+                                  {o.shippingAddress.street}<br />
+                                  {o.shippingAddress.city}, {o.shippingAddress.state}<br />
                                   {o.shippingAddress.zipCode}
                                 </div>
                               ) : <span style={{ fontSize: 12, color: '#9ca3af' }}>No address recorded</span>}
@@ -211,9 +207,9 @@ export default function Orders() {
                             <div>
                               <div style={{ fontWeight: 700, fontSize: 11, color: '#6b7280', textTransform: 'uppercase', marginBottom: 8 }}>Tracking</div>
                               <input value={trackingInput[o._id] || o.trackingNumber || ''} onChange={e => setTracking(t => ({ ...t, [o._id]: e.target.value }))}
-                                placeholder="Enter tracking number" style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 7, padding: '7px 10px', fontSize: 12, boxSizing: 'border-box', outline: 'none', marginBottom: 8 }}/>
+                                placeholder="Enter tracking number" style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 7, padding: '7px 10px', fontSize: 12, boxSizing: 'border-box', outline: 'none', marginBottom: 8 }} />
                               <div style={{ fontSize: 10, color: '#9ca3af', lineHeight: 1.5 }}>
-                                Setting status to "Shipped" auto-sends shipping email.<br/>
+                                Setting status to "Shipped" auto-sends shipping email.<br />
                                 Setting to "Delivered" sends delivery confirmation + review request.
                               </div>
                             </div>
@@ -221,7 +217,7 @@ export default function Orders() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>
@@ -232,9 +228,9 @@ export default function Orders() {
       {/* Pagination */}
       {total > 15 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-          <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page === 1} style={{ background: '#f3f4f6', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: page === 1 ? '#d1d5db' : '#374151' }}>Previous</button>
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ background: '#f3f4f6', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: page === 1 ? '#d1d5db' : '#374151' }}>Previous</button>
           <span style={{ padding: '7px 14px', fontSize: 12, color: '#6b7280' }}>Page {page} of {Math.ceil(total / 15)}</span>
-          <button onClick={() => setPage(p => p+1)} disabled={filtered.length < 15} style={{ background: M, color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Next</button>
+          <button onClick={() => setPage(p => p + 1)} disabled={filtered.length < 15} style={{ background: M, color: '#fff', border: 'none', borderRadius: 7, padding: '7px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Next</button>
         </div>
       )}
     </div>

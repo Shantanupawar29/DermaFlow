@@ -12,12 +12,9 @@ import {
   Info
 } from 'lucide-react';
 
-import axios from 'axios';
 import { Briefcase } from 'lucide-react';
 import LocationDetector from '../components/LocationDetector';
-
-const API_URL = 'http://localhost:5000/api';
-const token = () => localStorage.getItem('token');
+import api from '../services/api';
 
 // Status config
 const ORDER_STATUS = {
@@ -64,12 +61,12 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     try {
       const [userRes, ordersRes, wishlistRes, addressesRes, statsRes, routineRes] = await Promise.all([
-        axios.get(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${token()}` } }),
-        axios.get(`${API_URL}/orders/my-orders`, { headers: { Authorization: `Bearer ${token()}` } }),
-        axios.get(`${API_URL}/profile/wishlist`, { headers: { Authorization: `Bearer ${token()}` } }),
-        axios.get(`${API_URL}/profile/addresses`, { headers: { Authorization: `Bearer ${token()}` } }),
-        axios.get(`${API_URL}/profile/stats`, { headers: { Authorization: `Bearer ${token()}` } }),
-        axios.get(`${API_URL}/quiz/routine`, { headers: { Authorization: `Bearer ${token()}` } })
+        api.get('/auth/me'),
+        api.get('/orders/my-orders'),
+        api.get('/profile/wishlist'),
+        api.get('/profile/addresses'),
+        api.get('/profile/stats'),
+        api.get('/quiz/routine')
       ]);
       
       setUserData(userRes.data);
@@ -128,9 +125,7 @@ export default function Dashboard() {
 
   const removeFromWishlist = async (productId) => {
     try {
-      await axios.delete(`${API_URL}/profile/wishlist/${productId}`, {
-        headers: { Authorization: `Bearer ${token()}` }
-      });
+      await api.delete(`/profile/wishlist/${productId}`);
       setWishlist(prev => prev.filter(p => p._id !== productId));
     } catch (error) {
       console.error('Error removing from wishlist:', error);
@@ -140,13 +135,9 @@ export default function Dashboard() {
   const saveAddress = async () => {
     try {
       if (editingAddress) {
-        await axios.put(`${API_URL}/profile/addresses/${editingAddress._id}`, addressForm, {
-          headers: { Authorization: `Bearer ${token()}` }
-        });
+        await api.put(`/profile/addresses/${editingAddress._id}`, addressForm);
       } else {
-        await axios.post(`${API_URL}/profile/addresses`, addressForm, {
-          headers: { Authorization: `Bearer ${token()}` }
-        });
+        await api.post('/profile/addresses', addressForm);
       }
       setShowAddressForm(false);
       setEditingAddress(null);
@@ -159,9 +150,7 @@ export default function Dashboard() {
 
   const deleteAddress = async (addressId) => {
     if (window.confirm('Delete this address?')) {
-      await axios.delete(`${API_URL}/profile/addresses/${addressId}`, {
-        headers: { Authorization: `Bearer ${token()}` }
-      });
+      await api.delete(`/profile/addresses/${addressId}`);
       fetchDashboardData();
     }
   };
@@ -191,14 +180,13 @@ export default function Dashboard() {
     
     setSubmittingReview(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/reviews`, {
+      await api.post('/reviews', {
         productId: reviewProduct._id,
         orderId: reviewProduct.orderId,
         rating: reviewForm.rating,
         title: reviewForm.title,
         comment: reviewForm.comment
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
       
       alert('Review submitted! +25 GlowPoints added!');
       setShowReviewModal(false);
@@ -252,6 +240,19 @@ export default function Dashboard() {
           <a href="/track" class="inline-block mt-3 text-maroon text-sm">Go to Track Page →</a>
         </div>
       `;
+    }
+  };
+
+  const handleProfileUpdate = async () => {
+    const name = document.getElementById('profileName')?.value;
+    const phone = document.getElementById('profilePhone')?.value;
+    const newsletter = document.getElementById('newsletter')?.checked;
+    try {
+      await api.put('/auth/profile', { name, phone, preferences: { newsletter } });
+      alert('Profile updated!');
+      fetchDashboardData();
+    } catch (error) {
+      alert('Failed to update profile');
     }
   };
 
@@ -783,17 +784,7 @@ export default function Dashboard() {
                   <input type="checkbox" id="newsletter" defaultChecked={cu.preferences?.newsletter} />
                   <label htmlFor="newsletter" className="text-sm text-gray-600">Subscribe to email updates and offers</label>
                 </div>
-                <button onClick={async () => {
-                  const name = document.getElementById('profileName').value;
-                  const phone = document.getElementById('profilePhone').value;
-                  const newsletter = document.getElementById('newsletter').checked;
-                  await axios.put(`${API_URL}/auth/profile`, 
-                    { name, phone, preferences: { newsletter } },
-                    { headers: { Authorization: `Bearer ${token()}` } }
-                  );
-                  alert('Profile updated!');
-                  fetchDashboardData();
-                }} className="bg-maroon text-white px-6 py-2 rounded-lg hover:bg-maroon-light transition">
+                <button onClick={handleProfileUpdate} className="bg-maroon text-white px-6 py-2 rounded-lg hover:bg-maroon-light transition">
                   Save Changes
                 </button>
               </div>

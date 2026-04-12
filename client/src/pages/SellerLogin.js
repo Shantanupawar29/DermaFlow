@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { Truck, Eye, EyeOff } from 'lucide-react';
 
 export default function SellerLogin() {
@@ -17,7 +17,7 @@ export default function SellerLogin() {
     setError('');
     
     try {
-      const response = await axios.post('http://localhost:5000/api/seller/auth/login', {
+      const response = await api.post('/seller/auth/login', {
         email, password
       });
       

@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Package, AlertTriangle, Truck, TrendingUp, Bell, Send, RefreshCw, CheckCircle, Clock } from 'lucide-react';
-
-const API_URL = 'http://localhost:5000/api';
-const token = () => localStorage.getItem('token');
+import api from '../../services/api';
 
 export default function SCMDashboard() {
   const [dashboard, setDashboard] = useState(null);
@@ -19,9 +16,9 @@ export default function SCMDashboard() {
   const fetchData = async () => {
     try {
       const [dashboardRes, alertsRes, suppliersRes] = await Promise.all([
-        axios.get(`${API_URL}/scm/dashboard`, { headers: { Authorization: `Bearer ${token()}` } }),
-        axios.get(`${API_URL}/scm/alerts`, { headers: { Authorization: `Bearer ${token()}` } }),
-        axios.get(`${API_URL}/scm/suppliers`, { headers: { Authorization: `Bearer ${token()}` } })
+        api.get('/scm/dashboard'),
+        api.get('/scm/alerts'),
+        api.get('/scm/suppliers')
       ]);
       
       setDashboard(dashboardRes.data);
@@ -37,9 +34,7 @@ export default function SCMDashboard() {
   const checkAlerts = async () => {
     setCheckingAlerts(true);
     try {
-      await axios.post(`${API_URL}/scm/check-alerts`, {}, {
-        headers: { Authorization: `Bearer ${token()}` }
-      });
+      await api.post('/scm/check-alerts', {});
       await fetchData();
       alert('✅ Alerts checked and emails sent to suppliers!');
     } catch (error) {
@@ -52,9 +47,7 @@ export default function SCMDashboard() {
 
   const reorderProduct = async (productId) => {
     try {
-      await axios.post(`${API_URL}/scm/reorder`, { productId }, {
-        headers: { Authorization: `Bearer ${token()}` }
-      });
+      await api.post('/scm/reorder', { productId });
       alert('📦 Reorder request sent to supplier!');
       fetchData();
     } catch (error) {
@@ -148,11 +141,10 @@ export default function SCMDashboard() {
                 <tr>
                   <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
                     ✅ No low stock products. All inventory levels are healthy!
-                   </td>
+                  </td>
                 </tr>
               ) : (
                 dashboard?.lowStockProducts?.map(product => {
-                  // Check if alert was sent for this product
                   const alertSent = alerts.some(a => a.product?._id === product._id && a.emailSent);
                   return (
                     <tr key={product._id}>
@@ -161,7 +153,7 @@ export default function SCMDashboard() {
                         <span className={`font-bold ${product.stockQuantity === 0 ? 'text-red-600' : 'text-orange-600'}`}>
                           {product.stockQuantity}
                         </span>
-                       </td>
+                      </td>
                       <td className="px-6 py-4">{product.criticalThreshold}</td>
                       <td className="px-6 py-4">{product.supplier || 'Unassigned'}</td>
                       <td className="px-6 py-4">{product.daysLeft !== 'N/A' ? `${product.daysLeft} days` : 'N/A'}</td>
@@ -237,7 +229,7 @@ export default function SCMDashboard() {
 
       {/* SCM Strategies Info */}
       <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-3"> SCM Strategies Implemented</h3>
+        <h3 className="text-lg font-semibold mb-3">📊 SCM Strategies Implemented</h3>
         <div className="grid md:grid-cols-3 gap-4">
           <div className="bg-white rounded-lg p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-2">

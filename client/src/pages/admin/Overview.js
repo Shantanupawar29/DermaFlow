@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import {
   TrendingUp, ShoppingBag, Users, Package, AlertTriangle,
   ArrowUpRight, Star, RefreshCw, Activity, Clock
 } from 'lucide-react';
+import api from '../../services/api';
 
-const API   = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-const M     = '#4A0E2E';
-const tok   = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-const fmt   = v => '₹' + (v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+const M = '#4A0E2E';
+const fmt = v => '₹' + (v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
 function KPICard({ label, value, icon: Icon, color, sub, trend }) {
   return (
@@ -31,7 +29,7 @@ function KPICard({ label, value, icon: Icon, color, sub, trend }) {
 }
 
 export default function Overview() {
-  const [data, setData]       = useState(null);
+  const [data, setData] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,12 +37,12 @@ export default function Overview() {
     setLoading(true);
     try {
       const [dRes, rRes] = await Promise.allSettled([
-        axios.get(`${API}/admin/dashboard`, tok()),
-        axios.get(`${API}/reviews?flagged=true&limit=5`),
+        api.get('/admin/dashboard'),
+        api.get('/reviews?flagged=true&limit=5'),
       ]);
       if (dRes.status === 'fulfilled') setData(dRes.value.data);
       if (rRes.status === 'fulfilled') setReviews(rRes.value.data.reviews || []);
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
 
@@ -76,11 +74,11 @@ export default function Overview() {
 
       {/* KPIs */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
-        <KPICard label="Total Revenue"   value={fmt(data.totalRevenue)}   icon={TrendingUp} color={M} />
-        <KPICard label="Total Orders"    value={data.totalOrders}         icon={ShoppingBag} color="#1d4ed8" />
-        <KPICard label="Customers"       value={data.totalUsers}          icon={Users}       color="#047857" />
-        <KPICard label="Products"        value={data.totalProducts}       icon={Package}     color="#b45309" />
-        <KPICard label="Low Stock Items" value={(data.lowStock||[]).length} icon={AlertTriangle} color="#dc2626" sub={(data.lowStock||[]).length > 0 ? 'Needs attention' : 'All healthy'} />
+        <KPICard label="Total Revenue" value={fmt(data.totalRevenue)} icon={TrendingUp} color={M} />
+        <KPICard label="Total Orders" value={data.totalOrders} icon={ShoppingBag} color="#1d4ed8" />
+        <KPICard label="Customers" value={data.totalUsers} icon={Users} color="#047857" />
+        <KPICard label="Products" value={data.totalProducts} icon={Package} color="#b45309" />
+        <KPICard label="Low Stock Items" value={(data.lowStock || []).length} icon={AlertTriangle} color="#dc2626" sub={(data.lowStock || []).length > 0 ? 'Needs attention' : 'All healthy'} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 16, marginBottom: 16 }}>
@@ -157,8 +155,8 @@ export default function Overview() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0, marginLeft: 12 }}>
                     <div style={{ display: 'flex', gap: 2 }}>
-                      {[1,2,3,4,5].map(n => (
-                        <Star key={n} size={11} fill={r.rating >= n ? '#f59e0b' : 'none'} color={r.rating >= n ? '#f59e0b' : '#d1d5db'}/>
+                      {[1, 2, 3, 4, 5].map(n => (
+                        <Star key={n} size={11} fill={r.rating >= n ? '#f59e0b' : 'none'} color={r.rating >= n ? '#f59e0b' : '#d1d5db'} />
                       ))}
                     </div>
                     <span style={{ fontSize: 10, color: '#9ca3af' }}>{new Date(r.createdAt).toLocaleDateString('en-IN')}</span>

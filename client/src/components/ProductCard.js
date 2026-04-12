@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../utils/price';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+import api from '../services/api';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
@@ -23,7 +23,7 @@ const ProductCard = ({ product }) => {
   const checkWishlistStatus = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/profile/wishlist`, {
+      const response = await axios.get(`${api}/profile/wishlist`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const wishlist = response.data;
@@ -46,12 +46,12 @@ const ProductCard = ({ product }) => {
     try {
       const token = localStorage.getItem('token');
       if (isWishlisted) {
-        await axios.delete(`${API_URL}/profile/wishlist/${product._id}`, {
+        await axios.delete(`${api}/profile/wishlist/${product._id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setIsWishlisted(false);
       } else {
-        await axios.post(`${API_URL}/profile/wishlist/${product._id}`, {}, {
+        await axios.post(`${api}/profile/wishlist/${product._id}`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setIsWishlisted(true);

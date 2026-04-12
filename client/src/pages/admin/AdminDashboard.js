@@ -1,16 +1,12 @@
-// client/src/pages/admin/AdminDashboard.js
-// DROP-IN replacement for your existing AdminDashboard.js
-// Adds ERP and CRM routes to existing sidebar
-
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, NavLink } from 'react-router-dom';
-import axios from 'axios';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, BarChart3,
   Shield, Cloud, Database, FileText, TrendingUp, Megaphone,
   Truck, FlaskConical, Heart
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 
 // Existing pages
 import Overview         from './Overview';
@@ -21,13 +17,12 @@ import SalesReport      from './SalesReport';
 import Security         from './Security';
 import BIHub from './BIHub';
 import LegalDashboard   from './Legaldashboard';
-
 import SCMDashboard     from './SCMDashboard';
 import SellerManagement from './SellerManagement';
 
-// ── NEW PAGES (add these files from the zip) ──────────────────────────────────
-import ERPDashboard     from './ERPDashboard';   // NEW: Batch, BOM, COGS, Quarantine
-import CRMDashboard     from './CRMDashboard';   // NEW: Journey, Segments, Green Tier
+// NEW PAGES
+import ERPDashboard     from './ERPDashboard';
+import CRMDashboard     from './CRMDashboard';
 
 const MAROON = '#4A0E2E';
 
@@ -37,22 +32,19 @@ const NAV_ITEMS = [
   { path: 'inventory', label: 'Inventory',       Icon: Package },
   { path: 'customers', label: 'Customers',       Icon: Users },
   { path: 'sales',     label: 'Sales Report',    Icon: BarChart3 },
-
-  // ── NEW ───────────────────────────────────────────────────────────────────
-  { path: 'erp',       label: 'ERP', Icon: FlaskConical, isNew: true },
-  { path: 'crm',       label: 'CRM ',    Icon: Heart,        isNew: true },
-  // ─────────────────────────────────────────────────────────────────────────
+  { path: 'erp',       label: 'ERP',             Icon: FlaskConical, isNew: true },
+  { path: 'crm',       label: 'CRM',             Icon: Heart,        isNew: true },
   { path: 'scm',       label: 'SCM / Suppliers', Icon: Truck },
-{ path: 'bi-hub', label: 'Business Intelligence', Icon: TrendingUp, isNew: true },
+  { path: 'bi-hub',    label: 'Business Intelligence', Icon: TrendingUp, isNew: true },
   { path: 'security',  label: 'Security',        Icon: Shield },
   { path: 'sellers',   label: 'Sellers',         Icon: Users },
-   { path: 'legal',     label: 'Legal',           Icon: FileText },
+  { path: 'legal',     label: 'Legal',           Icon: FileText },
 ];
 
 const AdminDashboard = () => {
   const { user } = useAuth();
-  const navigate  = useNavigate();
-  const [stats,   setStats]   = useState({ totalOrders: 0, totalProducts: 0, totalUsers: 0, totalRevenue: 0, lowStockItems: 0 });
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({ totalOrders: 0, totalProducts: 0, totalUsers: 0, totalRevenue: 0, lowStockItems: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,10 +53,7 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/dashboard', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/admin/dashboard');
       const data = response.data;
       setStats({
         totalOrders:   data.totalOrders   || 0,
@@ -89,7 +78,7 @@ const AdminDashboard = () => {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
 
-      {/* ── Sidebar ── */}
+      {/* Sidebar */}
       <aside style={{ width: 220, background: '#1a0a15', flexShrink: 0, overflowY: 'auto', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50 }}>
         {/* Logo */}
         <div style={{ padding: '1.25rem 1.25rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -142,7 +131,7 @@ const AdminDashboard = () => {
         </nav>
       </aside>
 
-      {/* ── Main Content ── */}
+      {/* Main Content */}
       <main style={{ marginLeft: 220, flex: 1, background: '#f8fafc', minHeight: '100vh', padding: '2rem' }}>
         <Routes>
           <Route index                    element={<Overview />} />
@@ -150,17 +139,13 @@ const AdminDashboard = () => {
           <Route path="inventory"         element={<Inventory />} />
           <Route path="customers"         element={<Customers />} />
           <Route path="sales"             element={<SalesReport />} />
-
-          {/* ── NEW ROUTES ── */}
           <Route path="erp"               element={<ERPDashboard />} />
           <Route path="crm"               element={<CRMDashboard />} />
-
           <Route path="scm"               element={<SCMDashboard />} />
-          <Route path="bi-hub" element={<BIHub />} />
+          <Route path="bi-hub"            element={<BIHub />} />
           <Route path="security"          element={<Security />} />
           <Route path="legal"             element={<LegalDashboard />} />
           <Route path="sellers"           element={<SellerManagement />} />
-        
         </Routes>
       </main>
     </div>

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Tag, Zap, Mail, RefreshCw, Check, X, Package, Users, ChevronDown } from 'lucide-react';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import api from '../../services/api';
 const M   = '#4A0E2E';
 const tok = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 const fmt = v => '₹' + (v||0).toLocaleString('en-IN');

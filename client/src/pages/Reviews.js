@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Send, ThumbsUp, Flag, MessageCircle, User, Calendar } from 'lucide-react';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
+import api from '../services/api';
 
 export default function Reviews() {
   const [reviews, setReviews] = useState([]);
@@ -16,7 +14,7 @@ export default function Reviews() {
 
   const fetchReviews = async () => {
     try {
-      const response = await axios.get(`${API_URL}/reviews`);
+      const response = await api.get('/reviews');
       setReviews(response.data.reviews || []);
       if (response.data.length > 0) {
         const avg = response.data.reduce((sum, r) => sum + r.rating, 0) / response.data.length;
@@ -31,7 +29,7 @@ export default function Reviews() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await axios.post(`${API_URL}/reviews`, newReview);
+      await api.post('/reviews', newReview);
       alert('Thank you for your review! It will appear after moderation.');
       setNewReview({ name: '', rating: 5, comment: '', email: '' });
       fetchReviews();
@@ -48,7 +46,6 @@ export default function Reviews() {
       <h1 className="text-4xl font-display font-bold text-center mb-4">Customer Reviews</h1>
       <p className="text-center text-gray-600 mb-12">What our customers are saying about us</p>
 
-      {/* Average Rating Summary */}
       <div className="bg-gradient-to-r from-maroon to-maroon-light text-white rounded-lg shadow p-6 mb-8 text-center">
         <div className="text-5xl font-bold mb-2">{averageRating.toFixed(1)}</div>
         <div className="flex justify-center gap-1 mb-2">
@@ -60,7 +57,6 @@ export default function Reviews() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
-        {/* Review Form */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-lg shadow p-6 sticky top-24">
             <h2 className="text-xl font-semibold mb-4">Write a Review</h2>
@@ -97,7 +93,6 @@ export default function Reviews() {
           </div>
         </div>
 
-        {/* Reviews List */}
         <div className="lg:col-span-2">
           {reviews.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-lg shadow">

@@ -3,7 +3,7 @@ import { Heart } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-const API_URL = 'http://localhost:5000/api';
+import api from '../services/api';
 
 export default function WishlistButton({ productId, size = 20, className = '' }) {
   const { user, isAuthenticated } = useAuth();

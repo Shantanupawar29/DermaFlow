@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
 import { Printer, Download, ArrowLeft, Sparkles } from 'lucide-react';
-
-const API_URL = 'http://localhost:5000/api';
+import api from '../services/api';
 
 export default function Invoice() {
   const { id } = useParams();
@@ -17,10 +15,7 @@ export default function Invoice() {
 
   const fetchOrder = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/orders/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(`/orders/${id}`);
       setOrder(response.data);
     } catch (error) {
       console.error('Error fetching order:', error);

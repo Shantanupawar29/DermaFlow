@@ -1,3 +1,4 @@
+// src/services/api.js
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -22,6 +23,10 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+// Export the api instance as default and named export
+export const apiClient = api;
+export default api;
 
 // ==================== PRODUCT APIs ====================
 export const getProducts = async (category) => {
@@ -53,7 +58,7 @@ export const register = async (userData) => {
     const response = await api.post('/auth/register', userData);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      localStorage.setItem('user', JSON.stringify(response.data.user || response.data));
     }
     return response;
   } catch (error) {
@@ -67,7 +72,7 @@ export const login = async (credentials) => {
     const response = await api.post('/auth/login', credentials);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      localStorage.setItem('user', JSON.stringify(response.data.user || response.data));
     }
     return response;
   } catch (error) {

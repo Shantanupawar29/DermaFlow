@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { MapPin, Navigation, Loader } from 'lucide-react';
 import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
+import api from '../services/api';
 
 export default function LocationDetector({ onAddressFetched, buttonText = "Use My Location", className = "" }) {
   const [loading, setLoading] = useState(false);
@@ -60,7 +59,7 @@ export default function LocationDetector({ onAddressFetched, buttonText = "Use M
       // Try to get pincode details from India Post API if pincode is available
       if (formattedAddress.zipCode && formattedAddress.zipCode.length === 6) {
         try {
-          const pincodeRes = await axios.get(`${API_URL}/pincode/${formattedAddress.zipCode}`);
+          const pincodeRes = await axios.get(`${api}/pincode/${formattedAddress.zipCode}`);
           if (pincodeRes.data[0]?.Status === 'Success' && pincodeRes.data[0]?.PostOffice?.length > 0) {
             const postOffice = pincodeRes.data[0].PostOffice[0];
             formattedAddress.city = postOffice.District || formattedAddress.city;

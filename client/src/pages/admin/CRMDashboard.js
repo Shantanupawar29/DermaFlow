@@ -1,15 +1,12 @@
-// client/src/pages/admin/CRMDashboard.js
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
 import {
   Users, TrendingUp, AlertTriangle, Search, RefreshCw,
   BarChart3, MessageSquare, Star, Award, Heart,
   ChevronRight, UserCheck, Filter, Download,
   ArrowUpRight, Layers, Activity, Clock, Zap
 } from 'lucide-react';
+import api from '../../services/api';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-const tok = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 const M = '#4A0E2E';
 const fmt = v => '₹' + (v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
@@ -73,24 +70,14 @@ const inputStyle = {
   fontFamily: 'system-ui,sans-serif', background: '#fafafa', color: '#1f2937', outline: 'none'
 };
 
-const tabBtn = (current, t, label, Icon) => (
-  <button key={t} onClick={() => {}} style={{
-    display: 'flex', alignItems: 'center', gap: 5,
-    padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-    fontSize: 12, fontWeight: 600,
-    background: current === t ? M : 'transparent',
-    color: current === t ? '#fff' : '#6b7280',
-  }}>{Icon && <Icon size={13} />}{label}</button>
-);
-
 export default function CRMDashboard() {
-  const [tab, setTab]             = useState('overview');
-  const [summary, setSummary]     = useState(null);
-  const [clv, setClv]             = useState([]);
+  const [tab, setTab] = useState('overview');
+  const [summary, setSummary] = useState(null);
+  const [clv, setClv] = useState([]);
   const [fbAnalysis, setFbAnalysis] = useState(null);
   const [segResult, setSegResult] = useState(null);
-  const [vibe, setVibe]           = useState(null);
-  const [loading, setLoading]     = useState(true);
+  const [vibe, setVibe] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [filtering, setFiltering] = useState(false);
   const [vibeLoading, setVibeLoading] = useState(false);
 
@@ -102,9 +89,9 @@ export default function CRMDashboard() {
     setLoading(true);
     try {
       const [sRes, cRes, fRes] = await Promise.allSettled([
-        axios.get(`${API}/crm/summary`, tok()),
-        axios.get(`${API}/crm/customer-lifetime`, tok()),
-        axios.get(`${API}/crm/feedback-analysis`, tok()),
+        api.get('/crm/summary'),
+        api.get('/crm/customer-lifetime'),
+        api.get('/crm/feedback-analysis'),
       ]);
       if (sRes.status === 'fulfilled') setSummary(sRes.value.data);
       if (cRes.status === 'fulfilled') setClv(cRes.value.data);
@@ -123,7 +110,7 @@ export default function CRMDashboard() {
       if (segForm.tier) body.tier = segForm.tier;
       if (segForm.minOrders) body.minOrders = Number(segForm.minOrders);
       if (segForm.notBoughtSku) body.notBoughtSkuInDays = { sku: segForm.notBoughtSku, days: Number(segForm.notBoughtDays) };
-      const r = await axios.post(`${API}/crm/segment-filter`, body, tok());
+      const r = await api.post('/crm/segment-filter', body);
       setSegResult(r.data);
     } catch (e) { alert('Filter failed: ' + (e.response?.data?.message || e.message)); }
     setFiltering(false);
@@ -132,7 +119,7 @@ export default function CRMDashboard() {
   const runVibe = async () => {
     setVibeLoading(true);
     try {
-      const r = await axios.get(`${API}/admin/sentiment-vibe`, tok());
+      const r = await api.get('/admin/sentiment-vibe');
       setVibe(r.data);
     } catch (e) { alert('Analysis failed'); }
     setVibeLoading(false);
@@ -181,7 +168,7 @@ export default function CRMDashboard() {
           { k: 'segments', l: 'Segment Filter', I: Filter },
           { k: 'lifetime', l: 'Top Customers', I: Star },
           { k: 'feedback', l: 'Feedback', I: MessageSquare },
-          { k: 'vibe',     l: 'Sentiment', I: BarChart3 },
+          { k: 'vibe', l: 'Sentiment', I: BarChart3 },
         ].map(({ k, l, I }) => (
           <button key={k} onClick={() => setTab(k)} style={{
             display: 'flex', alignItems: 'center', gap: 5,

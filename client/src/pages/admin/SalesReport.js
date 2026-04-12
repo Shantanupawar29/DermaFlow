@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-
-const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
-const token = () => localStorage.getItem("token");
+import api from '../../services/api';
 
 export default function SalesReport() {
   const [data, setData] = useState(null);
@@ -11,9 +8,7 @@ export default function SalesReport() {
 
   useEffect(() => {
     setLoading(true);
-    axios.get(`${API}/analytics/sales?period=${period}`, { 
-      headers: { Authorization: `Bearer ${token()}` } 
-    })
+    api.get(`/analytics/sales?period=${period}`)
       .then(r => setData(r.data))
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -22,7 +17,6 @@ export default function SalesReport() {
   const fmt = v => `₹${(v / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
   const PERIODS = [{ v: "7", l: "7 Days" }, { v: "30", l: "30 Days" }, { v: "90", l: "90 Days" }];
 
-  // Export to CSV
   const exportToCSV = () => {
     if (!data || !data.revenueByDay) return;
     
@@ -52,7 +46,6 @@ export default function SalesReport() {
   if (loading) return <p>Loading sales report...</p>;
   if (!data) return <p style={{ color: "red" }}>Failed to load.</p>;
 
-  // Calculate category percentages
   const totalRevenue = data.totalRevenue || 0;
   const categories = [
     { name: "Skincare", revenue: data.salesByCategory?.find(c => c._id === 'skin')?.revenue || 0, color: "#7B2D3C" },
@@ -120,7 +113,7 @@ export default function SalesReport() {
           }
         </div>
 
-        {/* Sales by Category - FIXED with proper display */}
+        {/* Sales by Category */}
         <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "1rem", padding: "1.5rem" }}>
           <h2 style={{ fontWeight: 700, marginBottom: "1rem" }}>📂 Sales by Category</h2>
           {categories.map(c => {

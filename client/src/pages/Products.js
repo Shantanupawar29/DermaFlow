@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Filter, ChevronDown } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import axios from 'axios';
+import api from '../services/api';
+
+
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -42,7 +44,7 @@ const Products = () => {
       if (filters.sort) params.append('sort', filters.sort);
       if (filters.search) params.append('search', filters.search);
       
-      const response = await axios.get(`http://localhost:5000/api/products?${params}`);
+      const response = await api.get(`/products?${params}`);
       console.log("Fetched products:", response.data.products);
       setProducts(response.data.products);
     } catch (error) {
@@ -142,7 +144,6 @@ const Products = () => {
           
           {showFilters && (
             <div className="bg-white rounded-lg shadow p-4 mb-6 space-y-4">
-              {/* Mobile filters - same as desktop but stacked */}
               <div>
                 <h3 className="font-semibold mb-2">Categories</h3>
                 <select

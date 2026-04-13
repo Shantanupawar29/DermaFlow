@@ -349,7 +349,7 @@ const createOrderAndRedirect = async (orderData) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden w-full">
       <h1 className="text-3xl font-bold mb-8">Checkout</h1>
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
@@ -445,7 +445,7 @@ const createOrderAndRedirect = async (orderData) => {
 
         {/* ── Order Summary ─────────────────────────────────────────────── */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow p-6 sticky top-24">
+          <div className="bg-white rounded-lg shadow p-6 lg:sticky lg:top-24">
             <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
 
             {/* Coupon */}

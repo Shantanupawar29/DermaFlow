@@ -272,8 +272,8 @@ export default function Cart() {
                       </div>
                       
                       {/* Price */}
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 700, color: R, fontSize: '1.1rem' }}>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                           ₹{itemTotal.toFixed(2)}
                         </div>
                         {item.isSubscription && item.originalPrice && (

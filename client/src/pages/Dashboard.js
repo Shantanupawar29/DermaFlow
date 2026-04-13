@@ -481,7 +481,7 @@ const handleAddCard = async () => {
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <item.icon size={18} />
               <span className="text-sm font-medium">{item.label}</span>
             </div>
@@ -509,7 +509,7 @@ const handleAddCard = async () => {
   );
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 overflow-hidden">
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/40 z-30 lg:hidden" 
@@ -530,12 +530,12 @@ const handleAddCard = async () => {
         </Link>
       </div>
 
-      <main className="flex-1 lg:ml-72 min-h-screen pt-14 lg:pt-0">
+      <main className="flex-1 lg:ml-72 min-h-screen pt-14 lg:pt-0 overflow-x-hidden">
         <div className="p-4 lg:p-8 pb-16">
           
           {activeSection === 'overview' && (
             <>
-              <div className="bg-gradient-to-r from-maroon to-maroon-light rounded-xl p-5 text-white mb-6">
+             <div className="bg-gradient-to-r from-maroon to-maroon-light rounded-xl p-5 text-white mb-6 overflow-hidden">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -605,7 +605,7 @@ const handleAddCard = async () => {
                           <IconComponent size={20} className={stat.iconColor} />
                         </div>
                         <div>
-                          <p className="text-xl font-bold text-gray-800">
+                          <p className="text-xl font-bold text-gray-800 truncate">
                             {stat.prefix ? '₹' : ''}{stat.val}
                           </p>
                           <p className="text-xs text-gray-500">{stat.label}</p>

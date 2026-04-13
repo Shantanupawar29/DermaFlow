@@ -181,8 +181,18 @@ export default function Offers() {
       const { data } = await api.get('/auth/me');
       setUserData(data);
       const today = new Date().toDateString();
-      setCanSpin(data.lastSpinDate ? new Date(data.lastSpinDate).toDateString() !== today : true);
-      setCanScratch(data.lastScratchDate ? new Date(data.lastScratchDate).toDateString() !== today && (data.orderCount > 0) : data.orderCount > 0);
+      const isToday = (dateStr) => {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  const now = new Date();
+  return date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+};
+
+setCanSpin(!isToday(data.lastSpinDate));
+setCanScratch(!isToday(data.lastScratchDate) && data.orderCount > 0);
+      
     } catch (e) { 
       console.error(e); 
     }

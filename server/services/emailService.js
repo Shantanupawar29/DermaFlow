@@ -2,7 +2,30 @@ const nodemailer = require('nodemailer');
 
 const B = '#4A0E2E';  // brand maroon
 const URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-
+// Add this new function - Internal staff alert for low stock
+const sendLowStockAlertToStaff = async (adminEmail, product, currentStock, threshold) => {
+  const t = createTransporter(); 
+  if (!t) return false;
+  
+  await t.sendMail({
+    from: `"DermaFlow SCM Alert" <${process.env.EMAIL_USER}>`,
+    to: adminEmail,  // Your email address
+    subject: `⚠️ LOW STOCK ALERT: ${product.name}`,
+    html: shell('⚠️ Low Stock Alert - Action Required', `
+      <p><strong>Immediate attention required!</strong></p>
+      <div class="info-box" style="background:#fee2e2; border-color:#fecaca;">
+        <p><strong>Product:</strong> ${product.name}</p>
+        <p><strong>SKU:</strong> ${product.sku || 'N/A'}</p>
+        <p><strong style="color:#dc2626;">Current Stock:</strong> ${currentStock} units</p>
+        <p><strong>Critical Threshold:</strong> ${threshold} units</p>
+        <p><strong>Recommended Action:</strong> Place reorder immediately</p>
+      </div>
+      <a href="${URL}/api/scm/dashboard" class="btn">Go to SCM Dashboard</a>
+      <p style="margin-top:20px; font-size:12px; color:#6b7280;">This alert was triggered automatically by the stock monitoring system.</p>
+    `)
+  });
+  return true;
+};
 const createTransporter = () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.log('⚠️ Email credentials not configured. Emails will not be sent.');

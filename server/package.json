@@ -2,7 +2,6 @@
   "name": "server",
   "version": "1.0.0",
   "main": "index.js",
-
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
@@ -20,7 +19,8 @@
     "mongoose": "^9.3.3",
     "natural": "^6.2.0",
     "nodemailer": "^8.0.4",
-    "razorpay": "^2.9.6"
+    "razorpay": "^2.9.6",
+    "sib-api-v3-sdk": "^8.5.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

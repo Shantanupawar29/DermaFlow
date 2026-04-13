@@ -172,8 +172,8 @@ export default function Cart() {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 360px', gap: '1.5rem', alignItems: 'start' }}>
-
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
+  
           {/* Cart Items */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {cartItems.map((item) => {
@@ -293,7 +293,7 @@ export default function Cart() {
           </div>
 
           {/* Order Summary */}
-          <div style={{ position: 'sticky', top: 80 }}>
+        <div className="lg:sticky lg:top-20">
             <div style={{ background: '#fff', borderRadius: '1.25rem', border: '1px solid #f3f4f6', padding: '1.5rem' }}>
               <h2 style={{ fontWeight: 700, fontSize: '1.2rem', color: '#1f2937', marginBottom: '1.25rem' }}>Order Summary</h2>
 

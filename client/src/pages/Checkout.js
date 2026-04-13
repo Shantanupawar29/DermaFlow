@@ -175,7 +175,7 @@ const Checkout = () => {
     setPointsDiscount(discountAmount);
     setPointsApplied(true);
     setPointsToUse(maxPointsToUse);
-    setPointsMsg(`✅ ${maxPointsToUse} Glow Points applied — ₹${discountAmount.toFixed(2)} off!`);
+    setPointsMsg(` ${maxPointsToUse} Glow Points applied — ₹${discountAmount.toFixed(2)} off!`);
   };
 
   const taxAmount      = totalPrice * 0.18;
@@ -367,7 +367,7 @@ const createOrderAndRedirect = async (orderData) => {
                     <span className="font-medium">Use a saved address</span>
                   </label>
                   {!useNewAddress && (
-                    <div className="ml-6 space-y-2">
+                    <div className="ml-6 space-y-2 overflow-x-hidden">
                       {savedAddresses.map(addr => (
                         <label key={addr._id} className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                           <input type="radio" name="savedAddress" checked={selectedAddressId === addr._id} onChange={() => handleSelectAddress(addr._id)} className="mt-1" />

@@ -311,7 +311,7 @@ export default function Cart() {
               <div style={{ borderTop: '2px solid #f3f4f6', paddingTop: '1rem', marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 700, fontSize: '1rem' }}>Total</span>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: 'right', flexShrink: 0, maxWidth: '30%' }}>
                     <div style={{ fontSize: '1.6rem', fontWeight: 800, color: R }}>₹{getCartTotal().toFixed(2)}</div>
                     <div style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Inclusive of all taxes</div>
                   </div>

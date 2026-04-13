@@ -546,7 +546,7 @@ const handleAddCard = async () => {
                       <p className="text-sm text-white/80">Enter your order number to track delivery status</p>
                     </div>
                   </div>
-                  <div className="flex gap-3 w-full sm:w-auto">
+                <div className="flex gap-2 w-full">
                     <input 
                       type="text" 
                       placeholder="Order number"
@@ -555,7 +555,7 @@ const handleAddCard = async () => {
                     />
                     <button 
                       onClick={handleQuickTrack}
-                      className="bg-white text-maroon px-5 py-2 rounded-lg font-medium text-sm hover:bg-gray-100 transition"
+                      className="bg-white text-maroon px-3 py-2 rounded-lg font-medium text-sm hover:bg-gray-100 transition flex-shrink-0"
                     >
                       Track
                     </button>
@@ -1111,20 +1111,20 @@ const handleAddCard = async () => {
                     <Search size={16} className="text-gray-500" />
                     Search by Order Number
                   </h3>
-                  <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      id="trackOrderNumber"
-                      placeholder="Enter order number"
-                      className="flex-1 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-maroon/20 focus:border-maroon outline-none"
-                    />
-                    <button 
-                      onClick={handleTrackSearch}
-                      className="bg-maroon text-white px-4 py-2 rounded-lg text-sm hover:bg-maroon-light transition"
-                    >
-                      Track
-                    </button>
-                  </div>
+                <div className="flex gap-2">
+  <input 
+    type="text" 
+    id="trackOrderNumber"
+    placeholder="Enter order number"
+    className="flex-1 min-w-0 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-maroon/20 focus:border-maroon outline-none"
+  />
+  <button 
+    onClick={handleTrackSearch}
+    className="bg-maroon text-white px-3 py-2 rounded-lg text-sm hover:bg-maroon-light transition flex-shrink-0"
+  >
+    Track
+  </button>
+</div>
                   <div id="trackResult" className="mt-4"></div>
                 </div>
 

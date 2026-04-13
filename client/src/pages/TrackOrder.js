@@ -149,18 +149,18 @@ export default function TrackOrder() {
         <p style={{ color: '#9ca3af', fontSize: 14, margin: 0 }}>Enter your order number or view all recent orders</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 28 }}>
+     <div style={{ display: 'flex', gap: 10, marginBottom: 28, width: '100%' }}>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && searchOrder()}
           placeholder="Enter order number e.g. ORD-1234567890-123"
-          style={{ flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '11px 16px', fontSize: 13, outline: 'none', fontFamily: 'system-ui,sans-serif' }}
+            style={{ flex: 1, minWidth: 0, border: '1.5px solid #e5e7eb', borderRadius: 10, padding: '11px 16px', fontSize: 13, outline: 'none' }}
         />
         <button
           onClick={searchOrder}
           disabled={loading}
-          style={{ background: M, color: '#fff', border: 'none', borderRadius: 10, padding: '11px 20px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
+          style={{ flexShrink: 0, background: M, color: '#fff', border: 'none', borderRadius: 10, padding: '11px 16px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
         >
           {loading ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Search size={14} />} Track
         </button>

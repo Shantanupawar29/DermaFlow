@@ -3,7 +3,7 @@ import { Routes, Route, Link, useNavigate, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, BarChart3,
   Shield, Cloud, Database, FileText, TrendingUp, Megaphone,
-  Truck, FlaskConical, Heart
+  Truck, FlaskConical, Heart, Tag
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -23,7 +23,7 @@ import SellerManagement from './SellerManagement';
 // NEW PAGES
 import ERPDashboard     from './ERPDashboard';
 import CRMDashboard     from './CRMDashboard';
-
+import SalesManager from './SalesManager'; 
 const MAROON = '#4A0E2E';
 
 const NAV_ITEMS = [
@@ -32,6 +32,7 @@ const NAV_ITEMS = [
   { path: 'inventory', label: 'Inventory',       Icon: Package },
   { path: 'customers', label: 'Customers',       Icon: Users },
   { path: 'sales',     label: 'Sales Report',    Icon: BarChart3 },
+  { path: 'sales-manager', label: 'Sales Manager', Icon: Tag, isNew: true },
   { path: 'erp',       label: 'ERP',             Icon: FlaskConical, isNew: true },
   { path: 'crm',       label: 'CRM',             Icon: Heart,        isNew: true },
   { path: 'scm',       label: 'SCM / Suppliers', Icon: Truck },
@@ -139,6 +140,7 @@ const AdminDashboard = () => {
           <Route path="inventory"         element={<Inventory />} />
           <Route path="customers"         element={<Customers />} />
           <Route path="sales"             element={<SalesReport />} />
+           <Route path="sales-manager"     element={<SalesManager />} />
           <Route path="erp"               element={<ERPDashboard />} />
           <Route path="crm"               element={<CRMDashboard />} />
           <Route path="scm"               element={<SCMDashboard />} />

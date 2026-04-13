@@ -18,17 +18,31 @@ function generateInvoiceNumber() {
   return `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 }
 
-// Create order - WITH INVENTORY UPDATE
+// Create order - UPDATED to accept frontend calculations
 router.post('/', protect, async (req, res) => {
   try {
-    const { items, shippingAddress, paymentMethod, phone, totalAmount, discountAmount, couponCode } = req.body;
+    const { 
+      items, 
+      shippingAddress, 
+      paymentMethod, 
+      phone, 
+      totalAmount,      // This comes as paise from frontend
+      discountAmount,   // This comes as paise from frontend
+      couponCode,
+      glowPointsUsed = 0 
+    } = req.body;
 
     console.log('Creating order for user:', req.user._id);
-    console.log('Items:', items);
+    console.log('Received data:', { totalAmount, discountAmount, glowPointsUsed });
+
+    // Convert paise to rupees for backend storage
+    const totalAmountRupees = totalAmount / 100;
+    const discountAmountRupees = discountAmount / 100;
 
     let orderTotal = 0;
     const orderItems = [];
 
+    // Update inventory
     for (const item of items) {
       const product = await Product.findById(item.product);
       if (!product) {
@@ -54,13 +68,13 @@ router.post('/', protect, async (req, res) => {
 
       product.stockQuantity -= item.quantity;
       await product.save();
-      console.log(`Updated stock for ${product.name}: ${product.stockQuantity} remaining`);
     }
 
+    // Use frontend's calculated totals instead of recalculating
     const taxAmount = orderTotal * 0.18;
     const shippingAmount = orderTotal > 1000 ? 0 : 50;
-    const finalDiscount = discountAmount || 0;
-    const grandTotal = orderTotal + taxAmount + shippingAmount - finalDiscount;
+    const finalDiscount = discountAmountRupees;
+    const grandTotal = totalAmountRupees; // Frontend already sent the correct grand total
 
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const invoiceNumber = generateInvoiceNumber();
@@ -76,6 +90,7 @@ router.post('/', protect, async (req, res) => {
       taxAmount,
       shippingAmount,
       discountAmount: finalDiscount,
+      glowPointsUsed: glowPointsUsed,  // Store points used
       grandTotal,
       paymentMethod,
       shippingAddress,
@@ -85,11 +100,14 @@ router.post('/', protect, async (req, res) => {
       paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid'
     });
 
-    // Mark voucher used
+    // Mark voucher used if applicable
     if (couponCode) {
-      const userVoucher = await User.findById(req.user._id);
-      const v = (userVoucher.vouchers || []).find(x => x.code === couponCode && !x.isUsed);
-      if (v) { v.isUsed = true; await userVoucher.save(); }
+      const userDoc = await User.findById(req.user._id);
+      const voucher = (userDoc.vouchers || []).find(x => x.code === couponCode && !x.isUsed);
+      if (voucher) { 
+        voucher.isUsed = true; 
+        await userDoc.save(); 
+      }
     }
 
     // Award glow points (10 pts per ₹100)
@@ -97,11 +115,17 @@ router.post('/', protect, async (req, res) => {
     user.glowPoints = (user.glowPoints || 0) + pointsEarned;
     user.totalSpent = (user.totalSpent || 0) + grandTotal;
     user.orderCount = (user.orderCount || 0) + 1;
-    const tierChanged = await user.updateLoyaltyTier();
+    
+    // Deduct points that were used
+    if (glowPointsUsed > 0) {
+      user.glowPoints = Math.max(0, user.glowPoints - glowPointsUsed);
+    }
+    
+    const tierChanged = await user.updateLoyaltyTier?.() || false;
     await user.save();
 
     console.log('Order created:', order._id);
-    console.log('Inventory updated successfully');
+    console.log(`Points earned: ${pointsEarned}, Points used: ${glowPointsUsed}`);
 
     // Send emails (non-blocking)
     sendOrderConfirmation(user.email, user.name, order).catch(console.error);
@@ -109,7 +133,10 @@ router.post('/', protect, async (req, res) => {
       sendTierUpgrade(user.email, user.name, user.loyaltyTier, user.glowPoints).catch(console.error);
     }
 
-    res.status(201).json({ ...order.toObject(), glowPointsEarned: pointsEarned });
+    res.status(201).json({ 
+      ...order.toObject(), 
+      glowPointsEarned: pointsEarned 
+    });
   } catch (error) {
     console.error('Order creation error:', error);
     res.status(500).json({ message: error.message });
@@ -158,25 +185,21 @@ router.put('/:id/status', protect, admin, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Get user for emails
     const user = await User.findById(order.user);
 
-    // Send status update emails
     if (status === 'shipped' && user?.preferences?.orderUpdates !== false) {
       sendOrderShipped(user.email, user.name, order, trackingNumber).catch(console.error);
     }
 
     if (status === 'delivered' && user?.preferences?.orderUpdates !== false) {
       sendOrderDelivered(user.email, user.name, order).catch(console.error);
-      // Schedule feedback request email 7 days later
       setTimeout(() => {
         const productNames = order.items.map(i => i.name);
         sendFeedbackRequest(user.email, user.name, productNames).catch(console.error);
       }, 7 * 24 * 60 * 60 * 1000);
     }
 
-    // Audit log
-    await AuditLog.log({
+    await AuditLog.log?.({
       admin: req.user,
       action: 'UPDATE_ORDER_STATUS',
       targetType: 'Order',

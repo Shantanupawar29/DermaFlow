@@ -42,6 +42,10 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  glowPointsUsed: {              // ADD THIS FIELD
+    type: Number,
+    default: 0
+  },
   grandTotal: {
     type: Number,
     required: true
@@ -79,7 +83,7 @@ const orderSchema = new mongoose.Schema({
   notes: String
 });
 
-// Generate order number before saving - FIXED VERSION (no 'next' parameter)
+// Generate order number before saving
 orderSchema.pre('save', function() {
   if (!this.orderNumber) {
     this.orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;

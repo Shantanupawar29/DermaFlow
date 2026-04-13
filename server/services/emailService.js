@@ -1,44 +1,21 @@
-const nodemailer = require('nodemailer');
-
+// emailService.js
+const SibApiV3Sdk = require('sib-api-v3-sdk');
+console.log('BREVO KEY:', process.env.BREVO_API_KEY?.slice(0, 8) + '...');
 const B = '#4A0E2E';  // brand maroon
 const URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-// Add this new function - Internal staff alert for low stock
-const sendLowStockAlertToStaff = async (adminEmail, product, currentStock, threshold) => {
-  const t = createTransporter(); 
-  if (!t) return false;
-  
-  await t.sendMail({
-    from: `"DermaFlow SCM Alert" <${process.env.EMAIL_USER}>`,
-    to: adminEmail,  // Your email address
-    subject: `⚠️ LOW STOCK ALERT: ${product.name}`,
-    html: shell('⚠️ Low Stock Alert - Action Required', `
-      <p><strong>Immediate attention required!</strong></p>
-      <div class="info-box" style="background:#fee2e2; border-color:#fecaca;">
-        <p><strong>Product:</strong> ${product.name}</p>
-        <p><strong>SKU:</strong> ${product.sku || 'N/A'}</p>
-        <p><strong style="color:#dc2626;">Current Stock:</strong> ${currentStock} units</p>
-        <p><strong>Critical Threshold:</strong> ${threshold} units</p>
-        <p><strong>Recommended Action:</strong> Place reorder immediately</p>
-      </div>
-      <a href="${URL}/api/scm/dashboard" class="btn">Go to SCM Dashboard</a>
-      <p style="margin-top:20px; font-size:12px; color:#6b7280;">This alert was triggered automatically by the stock monitoring system.</p>
-    `)
-  });
-  return true;
-};
-const createTransporter = () => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.log('⚠️ Email credentials not configured. Emails will not be sent.');
-    return null;
-  }
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-    connectionTimeout: 10000,
-    socketTimeout: 10000,
-  });
-};
 
+// Brevo API Client Setup
+const defaultClient = SibApiV3Sdk.ApiClient.instance;
+const apiKey = defaultClient.authentications['api-key'];
+apiKey.apiKey = process.env.BREVO_API_KEY;
+
+const transactionalEmailApi = new SibApiV3Sdk.TransactionalEmailsApi();
+
+// Sender configuration - MUST be verified in Brevo dashboard
+const SENDER_EMAIL = process.env.SENDER_EMAIL || 'support@dermaflow.in';
+const SENDER_NAME = 'DermaFlow';
+
+// HTML shell template
 const shell = (title, content) => `
 <!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
@@ -64,14 +41,57 @@ const shell = (title, content) => `
   <a href="${URL}/dashboard" style="color: ${B}">Manage Preferences</a></div>
 </div></body></html>`;
 
-// ── Welcome email ─────────────────────────────────────────────────────────────
+// Safe send function using Brevo API
+const safeSend = async (to, subject, html, senderName = SENDER_NAME, senderEmail = SENDER_EMAIL) => {
+  if (!process.env.BREVO_API_KEY) {
+    console.log('⚠️ BREVO_API_KEY not configured. Email not sent.');
+    return false;
+  }
+
+  try {
+    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+    sendSmtpEmail.sender = { name: senderName, email: senderEmail };
+    sendSmtpEmail.to = [{ email: to }];
+    sendSmtpEmail.subject = subject;
+    sendSmtpEmail.htmlContent = html;
+
+    const data = await transactionalEmailApi.sendTransacEmail(sendSmtpEmail);
+    console.log(`✅ Email sent to ${to}. Message ID: ${data.messageId}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Email failed to ${to}:`, error.message);
+    return false;
+  }
+};
+
+// Low stock alert to staff
+const sendLowStockAlertToStaff = async (adminEmail, product, currentStock, threshold) => {
+  return await safeSend(
+    adminEmail,
+    `⚠️ LOW STOCK ALERT: ${product.name}`,
+    shell('⚠️ Low Stock Alert - Action Required', `
+      <p><strong>Immediate attention required!</strong></p>
+      <div class="info-box" style="background:#fee2e2; border-color:#fecaca;">
+        <p><strong>Product:</strong> ${product.name}</p>
+        <p><strong>SKU:</strong> ${product.sku || 'N/A'}</p>
+        <p><strong style="color:#dc2626;">Current Stock:</strong> ${currentStock} units</p>
+        <p><strong>Critical Threshold:</strong> ${threshold} units</p>
+        <p><strong>Recommended Action:</strong> Place reorder immediately</p>
+      </div>
+      <a href="${URL}/api/scm/dashboard" class="btn">Go to SCM Dashboard</a>
+      <p style="margin-top:20px; font-size:12px; color:#6b7280;">This alert was triggered automatically by the stock monitoring system.</p>
+    `),
+    'DermaFlow SCM Alert'
+  );
+};
+
+// Welcome email
 const sendWelcomeEmail = async (email, name, voucherCode) => {
-  const t = createTransporter(); if (!t) return false;
   const code = voucherCode || `WELCOME${Math.floor(Math.random() * 10000)}`;
-  await t.sendMail({
-    from: `"DermaFlow" <${process.env.EMAIL_USER}>`,
-    to: email, subject: `Welcome to DermaFlow, ${name}!`,
-    html: shell('Your skincare journey begins', `
+  await safeSend(
+    email,
+    `Welcome to DermaFlow, ${name}!`,
+    shell('Your skincare journey begins', `
       <p>Hi <strong>${name}</strong>,</p>
       <p>Welcome to DermaFlow! We're so excited to help you build a skincare routine that actually works for your skin.</p>
       <div class="info-box" style="background:#fef3c7; border: 1px solid #fde68a; text-align:center;">
@@ -82,13 +102,12 @@ const sendWelcomeEmail = async (email, name, voucherCode) => {
       <p>Start by taking our free skin quiz — it takes just 2 minutes and recommends your perfect AM/PM routine.</p>
       <a href="${URL}/quiz" class="btn">Take the Skin Quiz</a>
     `)
-  });
+  );
   return code;
 };
 
-// ── Order confirmation ────────────────────────────────────────────────────────
+// Order confirmation
 const sendOrderConfirmation = async (email, name, order) => {
-  const t = createTransporter(); if (!t) return false;
   const rows = (order.items || []).map(i => `
     <tr>
       <td style="padding: 10px 12px;">${i.name}</td>
@@ -96,10 +115,11 @@ const sendOrderConfirmation = async (email, name, order) => {
       <td style="padding: 10px 12px; text-align:right">₹${(i.price || 0).toLocaleString('en-IN')}</td>
       <td style="padding: 10px 12px; text-align:right; font-weight:600">₹${((i.price || 0) * i.quantity).toLocaleString('en-IN')}</td>
     </tr>`).join('');
-  await t.sendMail({
-    from: `"DermaFlow" <${process.env.EMAIL_USER}>`,
-    to: email, subject: `Order Confirmed — #${order.orderNumber}`,
-    html: shell('Your order is confirmed', `
+  
+  await safeSend(
+    email,
+    `Order Confirmed — #${order.orderNumber}`,
+    shell('Your order is confirmed', `
       <p>Hi <strong>${name}</strong>, your order has been placed successfully!</p>
       <div class="info-box">
         <p><strong>Order:</strong> ${order.orderNumber}</p>
@@ -115,17 +135,16 @@ const sendOrderConfirmation = async (email, name, order) => {
       </div>
       <a href="${URL}/dashboard" class="btn">Track Your Order</a>
     `)
-  });
+  );
   return true;
 };
 
-// ── Order shipped ─────────────────────────────────────────────────────────────
+// Order shipped
 const sendOrderShipped = async (email, name, order, trackingNumber) => {
-  const t = createTransporter(); if (!t) return false;
-  await t.sendMail({
-    from: `"DermaFlow" <${process.env.EMAIL_USER}>`,
-    to: email, subject: `Your order #${order.orderNumber} has shipped!`,
-    html: shell('Your order is on its way', `
+  await safeSend(
+    email,
+    `Your order #${order.orderNumber} has shipped!`,
+    shell('Your order is on its way', `
       <p>Hi <strong>${name}</strong>, great news — your order has been dispatched!</p>
       <div class="info-box">
         <p><strong>Order:</strong> ${order.orderNumber}</p>
@@ -134,20 +153,20 @@ const sendOrderShipped = async (email, name, order, trackingNumber) => {
       </div>
       <a href="${URL}/dashboard" class="btn">View Order Details</a>
     `)
-  });
+  );
   return true;
 };
 
-// ── Order delivered + review request ─────────────────────────────────────────
+// Order delivered + review request
 const sendOrderDelivered = async (email, name, order) => {
-  const t = createTransporter(); if (!t) return false;
   const productLinks = (order.items || []).map(i =>
     `<p style="margin:8px 0;"><a href="${URL}/product/${i.product}?review=1" style="color:${B}; font-weight:600; text-decoration:none;">${i.name} — Write a Review</a></p>`
   ).join('');
-  await t.sendMail({
-    from: `"DermaFlow" <${process.env.EMAIL_USER}>`,
-    to: email, subject: `Order delivered! How are your products?`,
-    html: shell('Your order has been delivered', `
+  
+  await safeSend(
+    email,
+    `Order delivered! How are your products?`,
+    shell('Your order has been delivered', `
       <p>Hi <strong>${name}</strong>, your order #${order.orderNumber} has been delivered!</p>
       <p>We hope you love your products. Your honest review helps thousands of other customers — and you earn <strong>25 Glow Points</strong> for every review you write.</p>
       <div class="info-box">
@@ -156,22 +175,22 @@ const sendOrderDelivered = async (email, name, order) => {
       </div>
       <a href="${URL}/dashboard" class="btn">Go to Dashboard</a>
     `)
-  });
+  );
   return true;
 };
 
-// ── Loyalty tier upgrade ──────────────────────────────────────────────────────
+// Loyalty tier upgrade
 const sendTierUpgrade = async (email, name, newTier, points) => {
-  const t = createTransporter(); if (!t) return false;
   const TIER_MSG = {
     silver:   'You now get free shipping on all orders above ₹499, plus early access to new launches.',
     gold:     'You now get priority support, exclusive member pricing, and a free birthday gift.',
     platinum: 'The highest tier! Enjoy VIP support, maximum discounts, and an exclusive welcome kit.',
   };
-  await t.sendMail({
-    from: `"DermaFlow" <${process.env.EMAIL_USER}>`,
-    to: email, subject: `You've reached ${newTier.charAt(0).toUpperCase() + newTier.slice(1)} status!`,
-    html: shell(`Congratulations — ${newTier.toUpperCase()} Member`, `
+  
+  await safeSend(
+    email,
+    `You've reached ${newTier.charAt(0).toUpperCase() + newTier.slice(1)} status!`,
+    shell(`Congratulations — ${newTier.toUpperCase()} Member`, `
       <p>Hi <strong>${name}</strong>, you've unlocked a new loyalty tier!</p>
       <div class="info-box" style="text-align:center; background: #fef3c7; border:1px solid #fde68a;">
         <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#92400e; margin-bottom:4px;">New Tier</p>
@@ -181,18 +200,18 @@ const sendTierUpgrade = async (email, name, newTier, points) => {
       <p>${TIER_MSG[newTier] || 'Keep shopping to unlock more rewards!'}</p>
       <a href="${URL}/dashboard" class="btn">View Your Rewards</a>
     `)
-  });
+  );
   return true;
 };
 
-// ── Post-purchase feedback (7 days after delivery) ────────────────────────────
+// Post-purchase feedback (7 days after delivery)
 const sendFeedbackRequest = async (email, name, products) => {
-  const t = createTransporter(); if (!t) return false;
   const productList = products.map(p => `<li style="margin:6px 0; font-size:13px;">${p}</li>`).join('');
-  await t.sendMail({
-    from: `"DermaFlow" <${process.env.EMAIL_USER}>`,
-    to: email, subject: `How is your skin feeling? We'd love to know`,
-    html: shell('A week in — how are things going?', `
+  
+  await safeSend(
+    email,
+    `How is your skin feeling? We'd love to know`,
+    shell('A week in — how are things going?', `
       <p>Hi <strong>${name}</strong>, it's been about a week since your DermaFlow products arrived.</p>
       <p>We'd love to hear how your skin is responding. Your feedback helps us improve and helps other customers make better choices.</p>
       <div class="info-box">
@@ -201,17 +220,16 @@ const sendFeedbackRequest = async (email, name, products) => {
       </div>
       <a href="${URL}/dashboard" class="btn">Write a Review</a>
     `)
-  });
+  );
   return true;
 };
 
-// ── Stock alert to supplier ───────────────────────────────────────────────────
+// Stock alert to supplier
 const sendStockAlert = async (supplierEmail, supplierName, product, alert) => {
-  const t = createTransporter(); if (!t) return false;
-  await t.sendMail({
-    from: `"DermaFlow SCM" <${process.env.EMAIL_USER}>`,
-    to: supplierEmail, subject: `Stock Alert — ${product.name} needs restocking`,
-    html: shell('Critical Stock Alert', `
+  await safeSend(
+    supplierEmail,
+    `Stock Alert — ${product.name} needs restocking`,
+    shell('Critical Stock Alert', `
       <p>Dear <strong>${supplierName}</strong>,</p>
       <p>The following product has reached a critical stock level and requires restocking:</p>
       <div class="info-box">
@@ -222,18 +240,18 @@ const sendStockAlert = async (supplierEmail, supplierName, product, alert) => {
         <p><strong>Recommended Reorder Qty:</strong> ${alert.reorderQuantity} units</p>
       </div>
       <a href="${URL}/admin/scm" class="btn">View SCM Dashboard</a>
-    `)
-  });
+    `),
+    'DermaFlow SCM'
+  );
   return true;
 };
 
-// ── Spin-the-wheel voucher won ────────────────────────────────────────────────
+// Spin-the-wheel voucher won
 const sendSpinVoucher = async (email, name, voucherCode, discount) => {
-  const t = createTransporter(); if (!t) return false;
-  await t.sendMail({
-    from: `"DermaFlow" <${process.env.EMAIL_USER}>`,
-    to: email, subject: `You won ${discount}% OFF — your spin reward is here!`,
-    html: shell('You spun and won!', `
+  await safeSend(
+    email,
+    `You won ${discount}% OFF — your spin reward is here!`,
+    shell('You spun and won!', `
       <p>Hi <strong>${name}</strong>, congratulations — you won a reward from the DermaFlow spin wheel!</p>
       <div class="info-box" style="background:#fef3c7; border:1px solid #fde68a; text-align:center;">
         <p style="font-size:12px; color:#92400e; font-weight:700; text-transform:uppercase; margin-bottom:8px;">Your Prize</p>
@@ -243,8 +261,29 @@ const sendSpinVoucher = async (email, name, voucherCode, discount) => {
       </div>
       <a href="${URL}/products" class="btn">Shop Now</a>
     `)
-  });
+  );
   return true;
+};
+
+// Birthday offer
+const sendBirthdayOffer = async (email, name) => {
+  const code = `BDAY${Math.floor(Math.random() * 9000) + 1000}`;
+  
+  await safeSend(
+    email,
+    `Happy Birthday ${name}! Your special gift inside`,
+    shell('Happy Birthday from DermaFlow!', `
+      <p>Hi <strong>${name}</strong>, wishing you a wonderful birthday!</p>
+      <p>As a special gift from us, here's an exclusive birthday discount just for you:</p>
+      <div class="info-box" style="background:#fef3c7;border:1px solid #fde68a;text-align:center;">
+        <p style="font-size:12px;color:#92400e;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Your Birthday Gift</p>
+        <p style="font-size:28px;font-weight:900;letter-spacing:0.15em;color:${B};margin:0;">${code}</p>
+        <p style="font-size:13px;color:#78350f;margin-top:6px;">20% OFF any order · Valid for 7 days</p>
+      </div>
+      <a href="${URL}/products" class="btn">Treat Yourself</a>
+    `)
+  );
+  return code;
 };
 
 module.exports = {
@@ -256,4 +295,6 @@ module.exports = {
   sendFeedbackRequest,
   sendStockAlert,
   sendSpinVoucher,
+  sendLowStockAlertToStaff,
+  sendBirthdayOffer,
 };

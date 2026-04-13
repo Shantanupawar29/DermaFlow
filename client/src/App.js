@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
+import { LoadingProvider } from './context/LoadingContext'; // Keep this
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import DiscountBanner from './components/DiscountBanner';
@@ -13,8 +14,8 @@ import ExitIntentPopup from './components/ExitIntentPopup';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
 import { DermaLoader } from './components/Loader';
-
-// Lazy load pages for better performance
+import { ApiLoaderWrapper } from './components/ApiLoaderWrapper';
+// Lazy load pages
 const Home = lazy(() => import('./pages/Home'));
 const Products = lazy(() => import('./pages/Products'));
 const ProductDetail = lazy(() => import('./pages/ProductDetail'));
@@ -38,6 +39,7 @@ const TrackOrder = lazy(() => import('./pages/TrackOrder'));
 const SlotMachine = lazy(() => import('./pages/SlotMachine'));
 const BIHub = lazy(() => import('./pages/admin/BIHub'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const Subscriptions = lazy(() => import('./pages/Subscriptions'));
 
 function App() {
   return (
@@ -45,77 +47,87 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <AppProvider>
-            <Toaster position="top-right" richColors />
-            <SessionTimeout />
-            <FirstTimePopup />
-            <ExitIntentPopup />
+          <LoadingProvider>
+  <ApiLoaderWrapper>
+              <Toaster position="top-right" richColors />
+              <SessionTimeout />
+              <FirstTimePopup />
+              <ExitIntentPopup />
 
-            <Routes>
-              {/* Admin routes - NO Navbar/Footer */}
-              <Route path="/admin/*" element={
-                <AdminRoute>
-                  <Suspense fallback={<DermaLoader message="Loading admin panel..." />}>
-                    <AdminDashboard />
-                  </Suspense>
-                </AdminRoute>
-              } />
-
-              {/* BIHub route */}
-              <Route path="/admin/bidashboard" element={
-                <AdminRoute>
-                  <Suspense fallback={<DermaLoader message="Loading BI Dashboard..." />}>
-                    <BIHub />
-                  </Suspense>
-                </AdminRoute>
-              } />
-
-              {/* Dashboard route */}
-              <Route path="/dashboard" element={
-                <PrivateRoute>
-                  <Suspense fallback={<DermaLoader />}>
-                    <Dashboard />
-                  </Suspense>
-                </PrivateRoute>
-              } />
-
-              {/* Public routes - WITH Navbar/Footer */}
-              <Route path="*" element={
-                <div className="min-h-screen bg-background flex flex-col">
-                  <DiscountBanner />
-                  <Navbar />
-                  <main className="flex-grow">
-                    <Suspense fallback={<DermaLoader />}>
-                      <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/home" element={<Home />} />
-                        <Route path="/products" element={<Products />} />
-                        <Route path="/product/:id" element={<ProductDetail />} />
-                        <Route path="/quiz" element={<Quiz />} />
-                        <Route path="/cart" element={<Cart />} />
-                        <Route path="/track" element={<TrackOrder />} />
-                        <Route path="/slot" element={<SlotMachine />} />
-                        <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/about" element={<About />} />
-                        <Route path="/help" element={<Help />} />
-                        <Route path="/offers" element={<Offers />} />
-                        <Route path="/order-confirmation/:id" element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
-                        <Route path="/invoice/:id" element={<PrivateRoute><Invoice /></PrivateRoute>} />
-                        <Route path="/reviews" element={<Reviews />} />
-                        <Route path="/feedback" element={<Feedback />} />
-                        <Route path="/privacy" element={<Privacy />} />
-                        <Route path="/terms" element={<Terms />} />
-                        <Route path="/returns" element={<Returns />} />
-                        // In App.js
-<Route path="/track" element={<TrackOrder />} />
-                      </Routes>
+              <Routes>
+                {/* Admin routes - NO Navbar/Footer */}
+                <Route path="/admin/*" element={
+                  <AdminRoute>
+                    <Suspense fallback={<DermaLoader message="Loading admin panel..." />}>
+                      <AdminDashboard />
                     </Suspense>
-                  </main>
-                  <Footer />
-                </div>
-              } />
-            </Routes>
+                  </AdminRoute>
+                } />
+
+                {/* BIHub route */}
+                <Route path="/admin/bidashboard" element={
+                  <AdminRoute>
+                    <Suspense fallback={<DermaLoader message="Loading BI Dashboard..." />}>
+                      <BIHub />
+                    </Suspense>
+                  </AdminRoute>
+                } />
+
+                {/* Dashboard route */}
+                <Route path="/dashboard" element={
+                  <PrivateRoute>
+                    <Suspense fallback={<DermaLoader message="Loading dashboard..." />}>
+                      <Dashboard />
+                    </Suspense>
+                  </PrivateRoute>
+                } />
+
+                <Route path="/subscriptions" element={
+                  <PrivateRoute>
+                    <Suspense fallback={<DermaLoader message="Loading subscriptions..." />}>
+                      <Subscriptions />
+                    </Suspense>
+                  </PrivateRoute>
+                } />
+
+                {/* Public routes - WITH Navbar/Footer */}
+                <Route path="*" element={
+                  <div className="min-h-screen bg-background flex flex-col">
+                    <DiscountBanner />
+                    <Navbar />
+                    <main className="flex-grow">
+                      <Suspense fallback={<DermaLoader />}>
+                        <Routes>
+                          <Route path="/" element={<Home />} />
+                          <Route path="/home" element={<Home />} />
+                          <Route path="/products" element={<Products />} />
+                          <Route path="/product/:id" element={<ProductDetail />} />
+                          <Route path="/quiz" element={<Quiz />} />
+                          <Route path="/cart" element={<Cart />} />
+                          <Route path="/track" element={<TrackOrder />} />
+                          <Route path="/slot" element={<SlotMachine />} />
+                          <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />
+                          <Route path="/login" element={<Login />} />
+                          <Route path="/register" element={<Register />} />
+                          <Route path="/about" element={<About />} />
+                          <Route path="/help" element={<Help />} />
+                          <Route path="/offers" element={<Offers />} />
+                          <Route path="/order-confirmation/:id" element={<PrivateRoute><OrderConfirmation /></PrivateRoute>} />
+                          <Route path="/invoice/:id" element={<PrivateRoute><Invoice /></PrivateRoute>} />
+                          <Route path="/reviews" element={<Reviews />} />
+                          <Route path="/feedback" element={<Feedback />} />
+                          <Route path="/privacy" element={<Privacy />} />
+                          <Route path="/terms" element={<Terms />} />
+                          <Route path="/returns" element={<Returns />} />
+                        </Routes>
+                      </Suspense>
+                    </main>
+                    <Footer />
+                  </div>
+                } />
+              </Routes>
+              </ApiLoaderWrapper>
+            </LoadingProvider>
           </AppProvider>
         </CartProvider>
       </AuthProvider>

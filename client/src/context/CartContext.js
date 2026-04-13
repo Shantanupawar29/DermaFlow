@@ -13,8 +13,7 @@ export const CartProvider = ({ children }) => {
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
       try {
-        const parsedCart = JSON.parse(savedCart);
-        setCartItems(parsedCart);
+        setCartItems(JSON.parse(savedCart));
       } catch (error) {
         console.error('Error loading cart:', error);
         setCartItems([]);
@@ -31,93 +30,67 @@ export const CartProvider = ({ children }) => {
     }
   }, [cartItems]);
 
-  // Calculate total items (cartCount)
   const cartCount = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
-  
-  // Calculate total price (without subscription discounts)
+
   const totalPrice = cartItems.reduce((sum, item) => {
-    const price = item.isSubscription 
-      ? (item.originalPrice || item.price) * 0.9 
+    const price = item.isSubscription
+      ? (item.originalPrice || item.price) * 0.9
       : (item.price || item.originalPrice);
     return sum + (price * (item.quantity || 0));
   }, 0);
 
-  // Add to cart function
   const addToCart = (product, quantity = 1) => {
+    // Always store ID as plain string to avoid ObjectId serialization issues
+    const productId = String(product._id || product.id);
+
     setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product._id || item._id === product._id);
-      
+      const existingItem = prevItems.find(item => item.id === productId);
+
       if (existingItem) {
-        // Update existing item
         return prevItems.map(item =>
-          (item.id === product._id || item._id === product._id)
+          item.id === productId
             ? { ...item, quantity: (item.quantity || 0) + quantity }
             : item
         );
       }
-      
-      // Add new item
-      const newItem = {
-        id: product._id,
-        _id: product._id,
+
+      return [...prevItems, {
+        id: productId,       // plain string — used everywhere
+        _id: productId,      // kept for compatibility
         name: product.name,
         price: product.price,
         originalPrice: product.originalPrice || product.price,
         image: product.images?.[0] || product.image || '/api/placeholder/100/100',
-        quantity: quantity,
+        quantity,
         sku: product.sku,
-        isSubscription: product.isSubscription || false
-      };
-      
-      return [...prevItems, newItem];
+        isSubscription: product.isSubscription || false,
+      }];
     });
   };
 
-  // Remove from cart function
-  const removeFromCart = async (productId) => {
-    setCartItems(prevItems => prevItems.filter(item => 
-      item.id !== productId && item._id !== productId
-    ));
+  const removeFromCart = (productId) => {
+    const id = String(productId);
+    setCartItems(prev => prev.filter(item => item.id !== id && item._id !== id));
   };
 
-  // Update quantity function
-  const updateQuantity = async (productId, quantity) => {
-    if (quantity <= 0) {
-      await removeFromCart(productId);
-      return;
-    }
-    
-    setCartItems(prevItems =>
-      prevItems.map(item =>
-        (item.id === productId || item._id === productId) 
-          ? { ...item, quantity: quantity } 
-          : item
+  const updateQuantity = (productId, quantity) => {
+    if (quantity <= 0) { removeFromCart(productId); return; }
+    const id = String(productId);
+    setCartItems(prev =>
+      prev.map(item =>
+        (item.id === id || item._id === id) ? { ...item, quantity } : item
       )
     );
   };
 
-  // Clear entire cart
+  // ✅ No window.confirm — clearCart is called after successful order
   const clearCart = () => {
-    if (window.confirm('Clear your entire cart?')) {
-      setCartItems([]);
-      localStorage.removeItem('cart');
-    }
+    setCartItems([]);
+    localStorage.removeItem('cart');
   };
 
-  // Get cart total function
-  const getCartTotal = () => {
-    return cartItems.reduce((sum, item) => {
-      const price = item.isSubscription 
-        ? (item.originalPrice || item.price) * 0.9 
-        : (item.price || item.originalPrice);
-      return sum + (price * (item.quantity || 0));
-    }, 0);
-  };
-
-  // Get item count
-  const getItemCount = () => {
-    return cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
-  };
+  const getCartTotal = () => totalPrice;
+  const getItemCount = () => cartCount;
 
   return (
     <CartContext.Provider value={{
@@ -130,7 +103,7 @@ export const CartProvider = ({ children }) => {
       clearCart,
       getCartTotal,
       getItemCount,
-      loading
+      loading,
     }}>
       {children}
     </CartContext.Provider>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
-const IDLE_MS = 30 * 60 * 1000; 
+const IDLE_MS = 60 * 60 * 1000; // Change from 30min → 60min
 const WARN_MS = 60 * 1000; // 60s warning
 
 const SessionTimeout = () => {

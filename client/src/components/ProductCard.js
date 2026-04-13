@@ -4,28 +4,24 @@ import { ShoppingCart, Star, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../utils/price';
-import axios from 'axios';
-
 import api from '../services/api';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      checkWishlistStatus();
-    }
-  }, [product._id, isAuthenticated]);
+useEffect(() => {
+  if (isAuthenticated && product?._id) {
+    checkWishlistStatus();
+  }
+}, [product._id, isAuthenticated]);
 
   const checkWishlistStatus = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${api}/profile/wishlist`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Fix: Use api.get() directly, not axios.get(`${api}/...`)
+      const response = await api.get('/wishlist');
       const wishlist = response.data;
       setIsWishlisted(wishlist.some(item => item._id === product._id));
     } catch (error) {
@@ -44,24 +40,23 @@ const ProductCard = ({ product }) => {
     
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
       if (isWishlisted) {
-        await axios.delete(`${api}/profile/wishlist/${product._id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.delete(`/wishlist/${product._id}`);
         setIsWishlisted(false);
       } else {
-        await axios.post(`${api}/profile/wishlist/${product._id}`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.post(`/wishlist/${product._id}`);
         setIsWishlisted(true);
       }
     } catch (error) {
       console.error('Error toggling wishlist:', error);
+      alert('Failed to update wishlist');
     } finally {
       setLoading(false);
     }
   };
+
+  // Don't render if no product
+  if (!product) return null;
 
   return (
     <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group relative">

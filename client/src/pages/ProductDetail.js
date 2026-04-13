@@ -2,7 +2,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { Heart, ShoppingBag, Star, Check, ChevronDown, ChevronUp, ThumbsUp, AlertTriangle, Package, Box } from 'lucide-react';
+import { Heart, ShoppingBag, Star, Check, ChevronDown, ChevronUp, ThumbsUp, AlertTriangle, Package, Box, Camera } from 'lucide-react';
 import api from '../services/api';
 
 const MAROON = '#4A0E2E';
@@ -39,7 +39,22 @@ function RatingBar({ label, count, total }) {
     </div>
   );
 }
-
+// Add this style block inside the return, before the main div:
+<style>{`
+  .product-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+    margin-bottom: 48px;
+  }
+  @media (max-width: 768px) {
+    .product-grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+`}</style>
 export default function ProductDetail() {
   const { id } = useParams();
   const { addToCart } = useCart();
@@ -144,49 +159,53 @@ export default function ProductDetail() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', alignItems: 'start', marginBottom: 48 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: window.innerWidth < 768 ? '1.5rem' : '3rem', alignItems: 'start', marginBottom: 48 }}>
         {/* Image / 3D Model Section */}
         <div>
-          {has3DModel && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <button
-                onClick={() => setShow3D(false)}
-                style={{
-                  flex: 1,
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 13,
-                  background: !show3D ? MAROON : '#f3f4f6',
-                  color: !show3D ? '#fff' : '#6b7280'
-                }}
-              >
-                📷 2D Image
-              </button>
-              <button
-                onClick={() => setShow3D(true)}
-                style={{
-                  flex: 1,
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 13,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  background: show3D ? MAROON : '#f3f4f6',
-                  color: show3D ? '#fff' : '#6b7280'
-                }}
-              >
-                <Box size={16} /> 3D View
-              </button>
-            </div>
-          )}
+        {has3DModel && (
+  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+    <button
+      onClick={() => setShow3D(false)}
+      style={{
+        flex: 1,
+        padding: '8px 16px',
+        borderRadius: 8,
+        border: 'none',
+        cursor: 'pointer',
+        fontWeight: 600,
+        fontSize: 13,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        background: !show3D ? MAROON : '#f3f4f6',
+        color: !show3D ? '#fff' : '#6b7280'
+      }}
+    >
+      <Camera size={16} /> 2D Image
+    </button>
+    <button
+      onClick={() => setShow3D(true)}
+      style={{
+        flex: 1,
+        padding: '8px 16px',
+        borderRadius: 8,
+        border: 'none',
+        cursor: 'pointer',
+        fontWeight: 600,
+        fontSize: 13,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        background: show3D ? MAROON : '#f3f4f6',
+        color: show3D ? '#fff' : '#6b7280'
+      }}
+    >
+      <Box size={16} /> 3D View
+    </button>
+  </div>
+)}
 
           {show3D && has3DModel ? (
             <Suspense fallback={<div style={{ height: 400, background: '#f5f0eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading 3D Model...</div>}>

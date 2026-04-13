@@ -37,7 +37,11 @@ const reviewRoutes = require('./routes/reviews');
 const quizRoutes = require('./routes/quiz');
 const pincodeRoutes = require('./routes/pincode');
 const profileRoutes = require('./routes/profile');
+// Import and use sales routes
+const salesRoutes = require('./routes/sales');
+const wishlistRoutes = require('./routes/wishlist');
 
+console.log('wishlist routes loaded:', typeof wishlistRoutes); // should print 'function'
 // ✅ ROUTES REGISTRATION
 app.use('/api/quiz', quizRoutes);
 app.use('/api/profile', profileRoutes);
@@ -53,7 +57,9 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/payment', paymentRoutes);
-app.use('/api/sales',         require('./routes/sales'));           // NEW: flash sales + winback
+app.use('/api/sales', salesRoutes);   
+app.use('/api/wishlist', wishlistRoutes);   
+// app.use('/api/auth/redeem-points', require('./routes/points'));  
 app.use('/api/subscriptions', require('./routes/subscriptions')); 
 // ERP and CRM routes
 try {

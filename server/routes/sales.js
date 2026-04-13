@@ -15,7 +15,17 @@ router.get('/', async (req, res) => {
     res.json(sales);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
-
+// GET /api/sales/upcoming — active + upcoming sales
+router.get('/upcoming', async (req, res) => {
+  try {
+    const now = new Date();
+    const sales = await Sale.find({
+      isActive: true,
+      endDate: { $gte: now } // not yet expired, includes future startDate
+    }).sort('startDate');
+    res.json(sales);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
 router.get('/admin-all', protect, admin, async (req, res) => {
   try {
     const sales = await Sale.find().sort('-createdAt');
@@ -86,7 +96,35 @@ router.post('/subscriptions', protect, async (req, res) => {
     res.status(201).json({ subscription: sub, glowPointsEarned: 20 });
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
+// Add this route to get user's wishlist (fixes ProductCard error)
+router.get('/profile/wishlist', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate('wishlist', 'name images price discountPercentage stockQuantity');
+    res.json(user.wishlist || []);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
 
+// Add/remove from wishlist
+router.post('/profile/wishlist/:productId', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const productId = req.params.productId;
+    const index = user.wishlist.indexOf(productId);
+    
+    if (index === -1) {
+      user.wishlist.push(productId);
+    } else {
+      user.wishlist.splice(index, 1);
+    }
+    
+    await user.save();
+    res.json({ wishlist: user.wishlist });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
 router.put('/subscriptions/:id', protect, async (req, res) => {
   try {
     const sub = await Subscription.findOneAndUpdate({ _id: req.params.id, user: req.user._id }, { status: req.body.status }, { new: true });

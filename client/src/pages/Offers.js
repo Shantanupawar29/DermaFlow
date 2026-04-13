@@ -1,44 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import {
-  Gift, Copy, Check, Tag, Clock, Star, Zap, 
-  Trophy, Ticket, Users, ChevronRight, 
-  Sparkles, ShoppingBag, Repeat, Target, 
-  BookOpen, Info, Disc, ArrowRight, Lock, 
-  Smartphone, Share2, MousePointer2, RefreshCw 
+  Gift, Copy, Check, Star, Trophy, Ticket, Users,
+  Sparkles, ShoppingBag, ArrowRight, Lock,
+  Share2, MousePointer2, RefreshCw, Package
 } from 'lucide-react';
-import api from '../services/api';  // Add this import
+import api from '../services/api';
 
 const MAROON = '#4A0E2E';
 const GOLD = '#C9A84C';
 const CHAMPAGNE = '#FDFCFB';
 
-// Static Coupons for Boutique Promo Codes
 const STATIC_COUPONS = [
   { code: 'WELCOME15', discount: '15% OFF', minSpend: '₹999' },
-  { code: 'GLOW10', discount: '10% OFF', minSpend: '₹499' },
-  { code: 'FREESHIP', discount: 'Free Shipping', minSpend: '₹999' },
+  { code: 'GLOW10',    discount: '10% OFF', minSpend: '₹499' },
+  { code: 'FREESHIP',  discount: 'Free Shipping', minSpend: '₹999' },
 ];
 
-// --- Segments for Spin Wheel ---
 const SPIN_SEGMENTS = [
-  { label: '20% OFF', type: 'voucher', discount: 20, color: MAROON, prob: 5 },
-  { label: '15% OFF', type: 'voucher', discount: 15, color: GOLD, prob: 10 },
-  { label: '50 PTS', type: 'points', pts: 50, color: '#8B6B5E', prob: 20 },
-  { label: 'FREE SHIP', type: 'voucher', freeShipping: true, color: '#A39185', prob: 15 },
-  { label: 'ZOMATO', type: 'affiliate', partner: 'Zomato', discount: 15, color: '#632A31', prob: 5 },
-  { label: '10% OFF', type: 'voucher', discount: 10, color: MAROON, prob: 20 },
-  { label: 'NYKAA', type: 'affiliate', partner: 'Nykaa', discount: 100, flat: true, color: GOLD, prob: 5 },
+  { label: '20% OFF',   type: 'voucher',   discount: 20,  color: MAROON,    prob: 5  },
+  { label: '15% OFF',   type: 'voucher',   discount: 15,  color: GOLD,      prob: 10 },
+  { label: '50 PTS',    type: 'points',    pts: 50,       color: '#8B6B5E', prob: 20 },
+  { label: 'FREE SHIP', type: 'voucher',   freeShipping: true, discount: 0, color: '#A39185', prob: 15 },
+  { label: 'ZOMATO',    type: 'affiliate', partner: 'Zomato', discount: 15, color: '#632A31', prob: 5  },
+  { label: '10% OFF',   type: 'voucher',   discount: 10,  color: MAROON,    prob: 20 },
+  { label: 'NYKAA',     type: 'affiliate', partner: 'Nykaa',  discount: 100, flat: true, color: GOLD, prob: 5 },
 ];
 
-// --- Scratch Card Prizes ---
 const SCRATCH_PRIZES = [
-  { label: '₹100 FLAT', type: 'voucher', discount: 100, flat: true, prob: 10 },
-  { label: '20% OFF', type: 'voucher', discount: 20, prob: 15 },
-  { label: '100 PTS', type: 'points', pts: 100, prob: 20 },
-  { label: 'FREE SHIP', type: 'voucher', freeShipping: true, prob: 20 },
+  { label: '₹100 FLAT', type: 'voucher', discount: 100, flat: true,         prob: 10 },
+  { label: '20% OFF',   type: 'voucher', discount: 20,                       prob: 15 },
+  { label: '100 PTS',   type: 'points',  pts: 100,                           prob: 20 },
+  { label: 'FREE SHIP', type: 'voucher', freeShipping: true, discount: 0,    prob: 20 },
 ];
 
 const weightedRandom = (items) => {
@@ -48,16 +42,9 @@ const weightedRandom = (items) => {
   return items[0];
 };
 
-// Helper function to copy to clipboard
-const copyToClipboard = (code, setCopiedCode) => {
-  navigator.clipboard.writeText(code);
-  setCopiedCode(code);
-  setTimeout(() => setCopiedCode(null), 2000);
-};
-
-// --- Sub-Component: Spin Wheel ---
+// ── Spin Wheel ────────────────────────────────────────────────────────────────
 function SpinWheel({ onResult, canSpin }) {
-  const canvasRef = useRef(null);
+  const canvasRef   = useRef(null);
   const rotationRef = useRef(0);
   const [spinning, setSpinning] = useState(false);
 
@@ -67,42 +54,77 @@ function SpinWheel({ onResult, canSpin }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = centerX - 10;
-    const angleStep = (2 * Math.PI) / SPIN_SEGMENTS.length;
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    const radius = cx - 10;
+    const step = (2 * Math.PI) / SPIN_SEGMENTS.length;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     SPIN_SEGMENTS.forEach((seg, i) => {
-      const startAngle = i * angleStep + rotationRef.current;
-      ctx.beginPath(); ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, startAngle, startAngle + angleStep);
-      ctx.fillStyle = seg.color; ctx.fill();
-      ctx.strokeStyle = CHAMPAGNE; ctx.lineWidth = 2; ctx.stroke();
-      ctx.save(); ctx.translate(centerX, centerY);
-      ctx.rotate(startAngle + angleStep / 2); ctx.fillStyle = '#fff';
-      ctx.font = 'bold 10px Inter'; ctx.fillText(seg.label, radius / 2 + 10, 5); ctx.restore();
+      const start = i * step + rotationRef.current;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, start, start + step);
+      ctx.fillStyle = seg.color;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Label
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(start + step / 2);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(seg.label, radius * 0.65, 4);
+      ctx.restore();
     });
-    ctx.beginPath(); ctx.arc(centerX, centerY, 15, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+
+    // Centre dot
+    ctx.beginPath();
+    ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+    ctx.fillStyle = MAROON;
+    ctx.fill();
   };
 
   const spin = () => {
     if (spinning || !canSpin) return;
     setSpinning(true);
+
+    // Pick prize BEFORE animation (deterministic)
     const prize = weightedRandom(SPIN_SEGMENTS);
+
+    // Figure out which segment index this prize is
+    const idx = SPIN_SEGMENTS.indexOf(prize);
+    const step = (2 * Math.PI) / SPIN_SEGMENTS.length;
+
+    // We want the pointer (top = -π/2) to land on this segment's midpoint
+    const targetAngle = -(idx * step + step / 2) - Math.PI / 2;
+    // Add 5 full rotations for drama
+    const totalRotation = targetAngle + Math.PI * 10;
+
     const duration = 4000;
     const startRotation = rotationRef.current;
-    const totalRotation = startRotation + (Math.PI * 10) + (Math.random() * Math.PI * 2);
-    const start = performance.now();
+    const startTime = performance.now();
 
     const animate = (now) => {
-      const elapsed = now - start;
+      const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const easeOut = 1 - Math.pow(1 - progress, 4);
       rotationRef.current = startRotation + (totalRotation - startRotation) * easeOut;
       drawWheel();
-      if (progress < 1) requestAnimationFrame(animate);
-      else { setSpinning(false); onResult(prize); }
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setSpinning(false);
+        onResult(prize);
+      }
     };
     requestAnimationFrame(animate);
   };
@@ -110,22 +132,41 @@ function SpinWheel({ onResult, canSpin }) {
   return (
     <div className="flex flex-col items-center">
       <div className="relative mb-6">
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10 text-maroon-900">
-          <ArrowRight className="rotate-90 fill-current" size={32} />
-        </div>
+        {/* Pointer arrow */}
+        <div style={{
+          position: 'absolute', top: -16, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 10, width: 0, height: 0,
+          borderLeft: '10px solid transparent',
+          borderRight: '10px solid transparent',
+          borderTop: `20px solid ${MAROON}`,
+        }} />
         <canvas ref={canvasRef} width={280} height={280} className="rounded-full shadow-2xl" />
       </div>
-      <button onClick={spin} disabled={!canSpin || spinning} className={`px-8 py-3 rounded-full font-bold text-xs tracking-widest uppercase transition-all shadow-md ${canSpin && !spinning ? 'bg-maroon-900 text-white hover:scale-105' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
-        {spinning ? 'Spinning...' : 'Spin Ritual'}
+      <button onClick={spin} disabled={!canSpin || spinning}
+        style={{
+          background: canSpin && !spinning ? MAROON : '#d1d5db',
+          color: '#fff', border: 'none', borderRadius: 999,
+          padding: '10px 32px', fontWeight: 700, fontSize: 13,
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+          cursor: canSpin && !spinning ? 'pointer' : 'not-allowed',
+          transition: 'transform 0.1s',
+        }}
+      >
+        {spinning ? 'Spinning…' : canSpin ? 'Spin Ritual' : 'Already Spun Today'}
       </button>
+      {!canSpin && (
+        <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 8 }}>
+          Come back tomorrow for your next spin!
+        </p>
+      )}
     </div>
   );
 }
 
-// --- Sub-Component: Scratch Card ---
+// ── Scratch Card ──────────────────────────────────────────────────────────────
 function ScratchCard({ canPlay, onWin }) {
   const [revealed, setRevealed] = useState(false);
-  const [prize, setPrize] = useState(null);
+  const [prize, setPrize]       = useState(null);
 
   const handleReveal = () => {
     if (!canPlay || revealed) return;
@@ -138,90 +179,101 @@ function ScratchCard({ canPlay, onWin }) {
   return (
     <div className="w-full">
       {!revealed ? (
-        <div 
-          onClick={handleReveal}
-          className={`h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all cursor-pointer ${canPlay ? 'border-gold-500 bg-champagne hover:bg-white' : 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'}`}
-        >
+        <div onClick={handleReveal} style={{
+          height: 140, borderRadius: 16,
+          border: `2px dashed ${canPlay ? GOLD : '#e5e7eb'}`,
+          background: canPlay ? CHAMPAGNE : '#f9fafb',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          cursor: canPlay ? 'pointer' : 'not-allowed',
+          opacity: canPlay ? 1 : 0.6, transition: 'all 0.2s',
+        }}>
           {canPlay ? (
             <>
-              <MousePointer2 className="text-gold-500 mb-2 animate-bounce" size={24} />
-              <p className="text-maroon-900 font-bold text-sm uppercase tracking-tighter">Tap to Scratch</p>
+              <MousePointer2 size={24} color={GOLD} style={{ marginBottom: 8 }} />
+              <p style={{ fontWeight: 700, fontSize: 13, color: MAROON, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tap to Scratch</p>
             </>
           ) : (
             <>
-              <Lock className="text-gray-300 mb-2" size={20} />
-              <p className="text-gray-400 text-xs">Unlock with your first order</p>
+              <Lock size={20} color="#d1d5db" style={{ marginBottom: 8 }} />
+              <p style={{ fontSize: 12, color: '#9ca3af' }}>Unlock with your first order</p>
             </>
           )}
         </div>
       ) : (
-        <div className="h-40 rounded-2xl bg-white border border-gold-500 flex flex-col items-center justify-center animate-pulse">
-          <Trophy className="text-gold-500 mb-1" size={20} />
-          <p className="text-maroon-900 font-bold text-xl">{prize?.label}</p>
-          <p className="text-[10px] text-gray-400">Added to your coupons</p>
+        <div style={{
+          height: 140, borderRadius: 16,
+          border: `1px solid ${GOLD}`, background: '#fff',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Trophy size={20} color={GOLD} style={{ marginBottom: 8 }} />
+          <p style={{ fontWeight: 800, fontSize: 22, color: MAROON }}>{prize?.label}</p>
+          <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Voucher saved to Your Coupons ✅</p>
         </div>
       )}
     </div>
   );
 }
 
+// ── Main Offers Page ──────────────────────────────────────────────────────────
 export default function Offers() {
   const { user } = useAuth();
-  const [userData, setUserData] = useState(null);
-  const [canSpin, setCanSpin] = useState(false);
+  const [userData, setUserData]   = useState(null);
+  const [canSpin, setCanSpin]     = useState(false);
   const [canScratch, setCanScratch] = useState(false);
   const [copiedCode, setCopiedCode] = useState(null);
+  const [prizeMsg, setPrizeMsg]   = useState('');
 
-  useEffect(() => { 
-    if (user) fetchUserData(); 
+  useEffect(() => {
+    if (user) fetchUserData();
   }, [user]);
 
   const fetchUserData = async () => {
     try {
       const { data } = await api.get('/auth/me');
       setUserData(data);
-      const today = new Date().toDateString();
-      const isToday = (dateStr) => {
-  if (!dateStr) return false;
-  const date = new Date(dateStr);
-  const now = new Date();
-  return date.getDate() === now.getDate() &&
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear();
-};
 
-setCanSpin(!isToday(data.lastSpinDate));
-setCanScratch(!isToday(data.lastScratchDate) && data.orderCount > 0);
-      
-    } catch (e) { 
-      console.error(e); 
-    }
+      const isToday = (dateStr) => {
+        if (!dateStr) return false;
+        const d = new Date(dateStr), n = new Date();
+        return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+      };
+      setCanSpin(!isToday(data.lastSpinDate));
+      setCanScratch(!isToday(data.lastScratchDate) && (data.orderCount || 0) > 0);
+    } catch (e) { console.error(e); }
   };
 
   const handlePrizeAction = async (prize, type) => {
     try {
-      await api.post(`/auth/${type}`, { prize });
-      fetchUserData();
-      alert(`Glow Reward: ${prize.label} has been granted!`);
-    } catch (e) { 
-      console.error(e); 
-      alert('Error saving prize. Please try again.');
+      const { data } = await api.post(`/auth/${type}`, { prize });
+      await fetchUserData(); // refresh so vouchers update
+
+      // Build human-readable prize message
+      let msg = '';
+      if (prize.type === 'points')    msg = `🎉 You won ${prize.pts} Glow Points!`;
+      else if (prize.freeShipping)    msg = `🎉 Free Shipping voucher saved!`;
+      else if (prize.type === 'affiliate') msg = `🎉 ${prize.partner} voucher saved — ${prize.discount}${prize.flat ? '₹' : '%'} off!`;
+      else msg = `🎉 ${prize.label} voucher saved to Your Coupons!`;
+
+      if (data.voucherCode) msg += ` Code: ${data.voucherCode}`;
+      setPrizeMsg(msg);
+      setTimeout(() => setPrizeMsg(''), 6000);
+    } catch (e) {
+      console.error(e);
+      const errMsg = e.response?.data?.message || 'Error saving prize';
+      setPrizeMsg(`❌ ${errMsg}`);
+      setTimeout(() => setPrizeMsg(''), 4000);
     }
   };
 
   const handleLuckyDraw = async () => {
-    if (userData?.luckyDrawEntered) {
-      alert('You have already entered the lucky draw!');
-      return;
-    }
+    if (userData?.luckyDrawEntered) { alert('You have already entered the lucky draw!'); return; }
     try {
       await api.post('/auth/lucky-draw', {});
       fetchUserData();
       alert("✨ You've entered the Grand Lucky Draw!");
-    } catch (e) { 
-      console.error(e); 
-      alert('Error entering lucky draw. Please try again.');
-    }
+    } catch (e) { alert('Error entering lucky draw'); }
   };
 
   const copyCode = (code) => {
@@ -230,166 +282,208 @@ setCanScratch(!isToday(data.lastScratchDate) && data.orderCount > 0);
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  // Get active earned vouchers (not used and not expired)
-  const activeEarnedVouchers = userData?.vouchers?.filter(
+  const activeEarnedVouchers = (userData?.vouchers || []).filter(
     v => !v.isUsed && new Date(v.expiresAt) > new Date()
-  ) || [];
+  );
+
+  const formatVoucher = (v) => {
+    if (v.type === 'flat') return `₹${v.discount} OFF`;
+    if (v.discount === 0)  return 'FREE SHIPPING';
+    return `${v.discount}% OFF`;
+  };
 
   return (
-    <div className="min-h-screen pb-20 bg-[#FDFCFB]" style={{ fontFamily: "'Inter', sans-serif" }}>
-      {/* 1. HERO HEADER */}
-      <section style={{ backgroundColor: MAROON }} className="py-20 px-4 text-center">
+    <div className="min-h-screen pb-20" style={{ background: CHAMPAGNE, fontFamily: "'Inter', sans-serif" }}>
+
+      {/* Hero */}
+      <section style={{ background: MAROON }} className="py-20 px-4 text-center">
         <div className="max-w-4xl mx-auto">
-          <Sparkles className="mx-auto mb-6 text-gold-500 opacity-90" size={48} />
-          <h1 
-            style={{ fontFamily: "'Cormorant Garamond', serif", color: CHAMPAGNE }} 
-            className="text-5xl md:text-6xl font-serif italic mb-4"
-          >
+          <Sparkles size={48} color={GOLD} style={{ margin: '0 auto 20px' }} />
+          <h1 style={{ fontFamily: "'Georgia', serif", color: CHAMPAGNE, fontSize: 'clamp(2rem, 8vw, 3.5rem)', fontStyle: 'italic', marginBottom: 8 }}>
             The Gilded Boutique
           </h1>
-          <p className="text-sm font-light tracking-widest uppercase text-champagne opacity-80">
+          <p style={{ fontSize: 12, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>
             Daily Rituals & Exclusive Perks
           </p>
         </div>
       </section>
 
-      {/* 2. STATS BAR */}
+      {/* Stats bar */}
       <div className="max-w-6xl mx-auto px-4 -mt-8">
         <div className="bg-white rounded-3xl p-6 shadow-xl grid grid-cols-2 md:grid-cols-4 gap-4 border border-gray-100">
-          <div className="text-center">
-            <Star className="mx-auto mb-1 text-gold-500" size={20} />
-            <div className="text-xl font-bold text-maroon-900">{userData?.glowPoints || 0}</div>
-            <p className="text-[10px] text-gray-400 uppercase">Glow Points</p>
-          </div>
-          <div className="text-center border-l border-gray-100">
-            <Ticket className="mx-auto mb-1 text-gold-500" size={20} />
-            <div className="text-xl font-bold text-maroon-900">{activeEarnedVouchers.length}</div>
-            <p className="text-[10px] text-gray-400 uppercase">Coupons</p>
-          </div>
-          <div className="text-center border-l border-gray-100">
-            <ShoppingBag className="mx-auto mb-1 text-gold-500" size={20} />
-            <div className="text-xl font-bold text-maroon-900">{userData?.orderCount || 0}</div>
-            <p className="text-[10px] text-gray-400 uppercase">Total Orders</p>
-          </div>
-          <div className="text-center border-l border-gray-100">
-            <Users className="mx-auto mb-1 text-gold-500" size={20} />
-            <div className="text-xl font-bold text-maroon-900">{userData?.referralCount || 0}</div>
-            <p className="text-[10px] text-gray-400 uppercase">Referrals</p>
-          </div>
+          {[
+            { icon: <Star size={20} color={GOLD} />, val: userData?.glowPoints || 0,           label: 'Glow Points' },
+            { icon: <Ticket size={20} color={GOLD} />, val: activeEarnedVouchers.length,        label: 'Coupons' },
+            { icon: <ShoppingBag size={20} color={GOLD} />, val: userData?.orderCount || 0,     label: 'Total Orders' },
+            { icon: <Users size={20} color={GOLD} />, val: userData?.referralCount || 0,        label: 'Referrals' },
+          ].map((s, i) => (
+            <div key={i} className={`text-center ${i > 0 ? 'border-l border-gray-100' : ''}`}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>{s.icon}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: MAROON }}>{s.val}</div>
+              <p style={{ fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</p>
+            </div>
+          ))}
         </div>
       </div>
 
+      {/* Prize message toast */}
+      {prizeMsg && (
+        <div style={{
+          position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)',
+          background: MAROON, color: '#fff', padding: '12px 24px', borderRadius: 12,
+          zIndex: 100, fontWeight: 600, fontSize: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+          maxWidth: '90vw', textAlign: 'center',
+        }}>
+          {prizeMsg}
+        </div>
+      )}
+
+      {/* Spin + Scratch */}
       <div className="max-w-6xl mx-auto px-4 mt-12 grid lg:grid-cols-3 gap-8">
-        
-        {/* 3. SPIN WHEEL SUITE */}
-        <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-10 shadow-sm border border-gray-50">
-          <div className="flex justify-between items-start mb-10">
+
+        {/* Spin Wheel */}
+        <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-50">
+          <div className="flex justify-between items-start mb-8">
             <div>
-              <h2 className="text-3xl font-serif italic text-maroon-900" style={{ fontFamily: "'Cormorant Garamond', serif" }}>Daily Spin Ritual</h2>
-              <p className="text-xs text-gray-400 tracking-widest uppercase">Resets every 24 hours</p>
+              <h2 style={{ fontFamily: "'Georgia', serif", fontSize: 28, fontStyle: 'italic', color: MAROON }}>Daily Spin Ritual</h2>
+              <p style={{ fontSize: 11, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>Resets every 24 hours</p>
             </div>
-            <RefreshCw className={canSpin ? "text-maroon-900" : "text-gray-200"} size={20} />
+            <RefreshCw size={18} color={canSpin ? MAROON : '#e5e7eb'} />
           </div>
-          <SpinWheel canSpin={canSpin} onResult={(p) => handlePrizeAction(p, 'spin')} />
+          {user ? (
+            <SpinWheel canSpin={canSpin} onResult={(p) => handlePrizeAction(p, 'spin')} />
+          ) : (
+            <div className="text-center py-12">
+              <p style={{ color: '#9ca3af', marginBottom: 12 }}>Please login to spin</p>
+              <Link to="/login" style={{ background: MAROON, color: '#fff', padding: '10px 24px', borderRadius: 8, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>Login</Link>
+            </div>
+          )}
         </div>
 
-        {/* 4. SIDEBAR: SCRATCH & SLOT */}
-        <div className="space-y-8">
-          {/* Scratch Card */}
-          <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-50">
-            <h3 className="text-xl font-serif italic text-maroon-900 mb-4" style={{ fontFamily: "'Cormorant Garamond', serif" }}>Mystery Scratch</h3>
-            <ScratchCard canPlay={canScratch} onWin={(p) => handlePrizeAction(p, 'scratch')} />
+        {/* Scratch + Slot */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-[2rem] p-7 shadow-sm border border-gray-50">
+            <h3 style={{ fontFamily: "'Georgia', serif", fontSize: 20, fontStyle: 'italic', color: MAROON, marginBottom: 16 }}>Mystery Scratch</h3>
+            {user ? (
+              <ScratchCard canPlay={canScratch} onWin={(p) => handlePrizeAction(p, 'scratch')} />
+            ) : (
+              <div className="text-center py-8">
+                <Lock size={24} color="#d1d5db" style={{ margin: '0 auto 8px' }} />
+                <p style={{ fontSize: 12, color: '#9ca3af' }}>Login to play</p>
+              </div>
+            )}
+            {!canScratch && user && (userData?.orderCount || 0) === 0 && (
+              <p style={{ fontSize: 11, color: '#9ca3af', textAlign: 'center', marginTop: 8 }}>Place your first order to unlock!</p>
+            )}
           </div>
 
-          {/* Slot Machine Link */}
-          <Link to="/slot" className="block group">
-            <div className="bg-maroon-900 rounded-[2rem] p-8 text-white flex justify-between items-center transition-transform hover:scale-95">
+          <Link to="/slot" style={{ textDecoration: 'none', display: 'block' }}>
+            <div style={{ background: MAROON, borderRadius: 32, padding: '28px 24px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'transform 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.transform = 'scale(0.97)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+            >
               <div>
-                <h3 className="text-xl font-serif italic" style={{ fontFamily: "'Cormorant Garamond', serif" }}>The Slot Sanctuary</h3>
-                <p className="text-[10px] opacity-60">High Stakes • High Glow</p>
+                <h3 style={{ fontFamily: "'Georgia', serif", fontSize: 18, fontStyle: 'italic' }}>The Slot Sanctuary</h3>
+                <p style={{ fontSize: 10, opacity: 0.6, marginTop: 3 }}>High Stakes • High Glow</p>
               </div>
-              <ArrowRight size={20} />
+              <ArrowRight size={18} />
+            </div>
+          </Link>
+
+          {/* Subscription link */}
+          <Link to="/subscriptions" style={{ textDecoration: 'none', display: 'block' }}>
+            <div style={{ background: `${GOLD}20`, border: `1px solid ${GOLD}40`, borderRadius: 24, padding: '20px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontWeight: 700, fontSize: 14, color: MAROON }}>📦 Subscribe & Save</h3>
+                <p style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>Up to 20% off on repeat orders</p>
+              </div>
+              <ArrowRight size={16} color={MAROON} />
             </div>
           </Link>
         </div>
       </div>
 
-      {/* 5. LUCKY DRAW */}
-      <div className="max-w-6xl mx-auto px-4 mt-12">
-        <div className="bg-maroon-900  rounded-[3rem] p-10 text-white relative overflow-hidden shadow-2xl">
-          <div className="relative z-10 max-w-lg">
-            <div className="bg-gold-500 text-maroon-900 text-[10px] font-bold px-3 py-1 rounded-full inline-block mb-4">LIVE EVENT</div>
-            <h2 className="text-4xl font-serif italic mb-4" style={{ fontFamily: "'Cormorant Garamond', serif" }}>Grand Beauty Hamper</h2>
-            <p className="text-sm opacity-80 mb-8 font-light">Enter our monthly lucky draw to win the "DermaFlow Radiance Kit" worth ₹4,999. Winners announced on the 1st of every month.</p>
-            
+      {/* Lucky Draw */}
+      <div className="max-w-6xl mx-auto px-4 mt-10">
+        <div style={{ background: MAROON, borderRadius: 48, padding: '40px 40px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'relative', zIndex: 1, maxWidth: 500 }}>
+            <span style={{ background: GOLD, color: MAROON, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 999 }}>LIVE EVENT</span>
+            <h2 style={{ fontFamily: "'Georgia', serif", fontSize: 36, fontStyle: 'italic', margin: '12px 0' }}>Grand Beauty Hamper</h2>
+            <p style={{ fontSize: 13, opacity: 0.8, marginBottom: 24 }}>Win the "DermaFlow Radiance Kit" worth ₹4,999. Winners announced on the 1st of every month.</p>
             {userData?.luckyDrawEntered ? (
-              <div className="flex items-center gap-2 text-gold-500 font-bold">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: GOLD, fontWeight: 700 }}>
                 <Check size={18} /> ENTRY CONFIRMED
               </div>
             ) : (
-              <button onClick={handleLuckyDraw} className="bg-gold-500 text-maroon-900 px-8 py-3 rounded-full font-bold text-sm hover:bg-white transition-colors">
+              <button onClick={handleLuckyDraw} style={{ background: GOLD, color: MAROON, border: 'none', borderRadius: 999, padding: '12px 28px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
                 ENTER DRAW FOR FREE
               </button>
             )}
           </div>
-          <Trophy size={200} className="absolute -right-10 -bottom-10 opacity-10 rotate-12" />
+          <Trophy size={180} style={{ position: 'absolute', right: -20, bottom: -20, opacity: 0.08 }} />
         </div>
       </div>
 
-      {/* 6. REFERRAL & COUPON SECTION */}
-      <div className="max-w-6xl mx-auto px-4 mt-12">
+      {/* Referral + Coupons */}
+      <div className="max-w-6xl mx-auto px-4 mt-10">
         <div className="grid md:grid-cols-2 gap-8">
+
           {/* Referral */}
           <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-50">
-            <h3 className="text-xl font-serif italic text-maroon-900 mb-2" style={{ fontFamily: "'Cormorant Garamond', serif" }}>Invite Your Inner Circle</h3>
-            <p className="text-xs text-gray-400 mb-6">Earn 200 Glow Points for every successful referral.</p>
-            <div className="flex items-center justify-between bg-champagne p-4 rounded-2xl border border-gray-100">
-              <span className="font-mono font-bold text-maroon-900 tracking-widest">{userData?.referralCode || 'DERMA_GIFT'}</span>
-              <button onClick={() => copyCode(userData?.referralCode || 'DERMA_GIFT')} className="text-gold-500 hover:text-maroon-900 transition-colors">
-                <Share2 size={20} />
+            <h3 style={{ fontFamily: "'Georgia', serif", fontSize: 20, fontStyle: 'italic', color: MAROON, marginBottom: 6 }}>Invite Your Inner Circle</h3>
+            <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20 }}>Earn 200 Glow Points for every successful referral.</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: CHAMPAGNE, border: '1px solid #e5e7eb', borderRadius: 16, padding: '14px 18px' }}>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, color: MAROON, letterSpacing: '0.1em' }}>{userData?.referralCode || 'DERMA_GIFT'}</span>
+              <button onClick={() => copyCode(userData?.referralCode || 'DERMA_GIFT')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: GOLD }}>
+                <Share2 size={18} />
               </button>
             </div>
           </div>
 
-          {/* Coupon Section - Combined Earned + Static Coupons */}
+          {/* Coupons */}
           <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-50">
-            <h3 className="text-xl font-serif italic text-maroon-900 mb-4" style={{ fontFamily: "'Cormorant Garamond', serif" }}>Your Active Coupons</h3>
-            
-            {/* Earned Vouchers from Games */}
+            <h3 style={{ fontFamily: "'Georgia', serif", fontSize: 20, fontStyle: 'italic', color: MAROON, marginBottom: 16 }}>Your Active Coupons</h3>
+
+            {/* Earned vouchers */}
             {activeEarnedVouchers.length > 0 && (
-              <div className="mb-6">
-                <p className="text-xs text-gold-500 mb-3 font-semibold">EARNED REWARDS</p>
-                <div className="space-y-3">
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ fontSize: 11, color: GOLD, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Earned Rewards</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {activeEarnedVouchers.map((v, i) => (
-                    <div key={i} className="flex justify-between items-center p-3 bg-maroon-900 text-white rounded-xl">
+                    <div key={i} style={{ background: MAROON, borderRadius: 12, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <span className="text-sm font-bold">{v.type === 'flat' ? `₹${v.discount}` : `${v.discount}%`} OFF</span>
-                        <p className="text-[9px] opacity-70">Expires {new Date(v.expiresAt).toLocaleDateString()}</p>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{formatVoucher(v)}</span>
+                        {v.partner && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginLeft: 6 }}>via {v.partner}</span>}
+                        <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
+                          Expires {new Date(v.expiresAt).toLocaleDateString()}
+                        </p>
                       </div>
-                      <code className="text-[10px] bg-white/20 px-2 py-1 rounded font-mono">{v.code}</code>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <code style={{ fontSize: 10, background: 'rgba(255,255,255,0.15)', padding: '3px 8px', borderRadius: 6, color: '#fff', fontFamily: 'monospace' }}>{v.code}</code>
+                        <button onClick={() => copyCode(v.code)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: GOLD }}>
+                          {copiedCode === v.code ? <Check size={14} /> : <Copy size={14} />}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Boutique Promo Codes (Static) */}
+            {/* Static promo codes */}
             <div>
-              <p className="text-xs text-gray-400 mb-3 font-semibold">BOUTIQUE PROMO CODES</p>
-              <div className="space-y-3">
-                {STATIC_COUPONS.map((coupon, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 bg-champagne rounded-2xl border border-gray-100 hover:border-gold-500 transition-colors group">
+              <p style={{ fontSize: 11, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Boutique Promo Codes</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {STATIC_COUPONS.map((c, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: CHAMPAGNE, borderRadius: 16, border: '1px solid #f0f0f0' }}>
                     <div>
-                      <span className="text-sm font-bold text-maroon-900">{coupon.discount}</span>
-                      <p className="text-[10px] text-gray-400">On orders over {coupon.minSpend}</p>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: MAROON }}>{c.discount}</span>
+                      <p style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>On orders over {c.minSpend}</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <code className="text-xs font-mono font-bold text-gold-500">{coupon.code}</code>
-                      <button 
-                        onClick={() => copyCode(coupon.code)} 
-                        className="p-2 text-gray-300 group-hover:text-maroon-900 transition-colors"
-                      >
-                        {copiedCode === coupon.code ? <Check size={16} /> : <Copy size={16} />}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <code style={{ fontSize: 12, fontWeight: 700, color: GOLD, fontFamily: 'monospace' }}>{c.code}</code>
+                      <button onClick={() => copyCode(c.code)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}>
+                        {copiedCode === c.code ? <Check size={14} color={MAROON} /> : <Copy size={14} />}
                       </button>
                     </div>
                   </div>
@@ -398,31 +492,14 @@ setCanScratch(!isToday(data.lastScratchDate) && data.orderCount > 0);
             </div>
 
             {activeEarnedVouchers.length === 0 && (
-              <p className="text-center text-gray-300 text-sm mt-6">Play games to earn exclusive coupons!</p>
+              <p style={{ textAlign: 'center', color: '#d1d5db', fontSize: 13, marginTop: 16 }}>Spin or scratch to earn exclusive coupons!</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Global CSS for Fonts & Colors */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600&family=Inter:wght@300;400;700&display=swap');
-        
-        .bg-gold-500 { background-color: #C9A84C; }
-        .text-gold-500 { color: #C9A84C; }
-        .bg-maroon-900 { background-color: #4A0E2E; }
-        .text-maroon-900 { color: #4A0E2E; }
-        .bg-champagne { background-color: #FDFCFB; }
-        .text-champagne { color: #FDFCFB; }
-        .border-gold-500 { border-color: #C9A84C; }
-        
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-5px); }
-        }
-        .animate-bounce {
-          animation: bounce 0.5s ease-in-out;
-        }
       `}</style>
     </div>
   );

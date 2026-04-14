@@ -75,14 +75,11 @@ api.interceptors.response.use(
     }
     
     // Handle session expiry
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // Don't redirect if already on login page
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
-    }
+// Handle session expiry - Let AuthContext handle it
+if (error.response?.status === 401) {
+  console.log("Unauthorized - letting AuthContext handle logout");
+  // DON'T redirect here! Just let the error bubble up to AuthContext
+}
     return Promise.reject(error);
   }
 );
@@ -131,7 +128,6 @@ export const register = async (userData, options = {}) => {
     const response = await api.post('/auth/register', userData, options);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user || response.data));
     }
     return response;
   } catch (error) {
@@ -145,7 +141,6 @@ export const login = async (credentials, options = {}) => {
     const response = await api.post('/auth/login', credentials, options);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user || response.data));
     }
     return response;
   } catch (error) {
@@ -174,7 +169,6 @@ export const updateProfile = async (profileData, options = {}) => {
   try {
     const response = await api.put('/auth/profile', profileData, options);
     if (response.data.user) {
-      localStorage.setItem('user', JSON.stringify(response.data.user));
     }
     return response;
   } catch (error) {

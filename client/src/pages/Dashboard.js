@@ -742,7 +742,7 @@ const handleAddCard = async () => {
                           className="border rounded-lg p-4 cursor-pointer hover:shadow-md transition"
                           onClick={() => openOrderDetails(order)}
                         >
-                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-wrap gap-2">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-wrap">
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 ${ORDER_STATUS[order.status]?.bg} rounded-full flex items-center justify-center`}>
                                 <StatusIcon size={14} className={ORDER_STATUS[order.status]?.color} />

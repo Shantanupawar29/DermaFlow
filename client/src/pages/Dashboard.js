@@ -660,7 +660,7 @@ const handleAddCard = async () => {
               {/* Active Subscriptions Preview */}
               {subscriptions.filter(s => s.status === 'active').length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm p-5 mb-6">
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                     <h3 className="font-semibold text-gray-800 flex items-center gap-2">
                       <Repeat size={18} className="text-maroon" />
                       Active Subscriptions
@@ -678,7 +678,7 @@ const handleAddCard = async () => {
                       const PlanIcon = plan.icon;
                       return (
                         <div key={sub._id} className="border rounded-lg p-4">
-                          <div className="flex gap-4">
+                          <div className="flex flex-col sm:flex-row gap-4">
                             <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                               <img 
   src={sub.product?.images?.[0] || sub.productImage || '/api/placeholder/60/60'} 
@@ -714,7 +714,7 @@ const handleAddCard = async () => {
               )}
 
               <div className="bg-white rounded-xl shadow-sm p-5">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                   <h3 className="font-semibold text-gray-800">Recent Orders</h3>
                   <Link 
                     to="#" 
@@ -742,7 +742,7 @@ const handleAddCard = async () => {
                           className="border rounded-lg p-4 cursor-pointer hover:shadow-md transition"
                           onClick={() => openOrderDetails(order)}
                         >
-                          <div className="flex justify-between items-center flex-wrap gap-2">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-wrap gap-2">
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 ${ORDER_STATUS[order.status]?.bg} rounded-full flex items-center justify-center`}>
                                 <StatusIcon size={14} className={ORDER_STATUS[order.status]?.color} />
@@ -774,7 +774,7 @@ const handleAddCard = async () => {
 
           {activeSection === 'subscriptions' && (
             <div className="bg-white rounded-xl shadow-sm p-5">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">My Subscriptions</h1>
                 <Link 
                   to="/subscriptions" 
@@ -803,7 +803,7 @@ const handleAddCard = async () => {
                     return (
                       <div key={sub._id} className="border rounded-lg overflow-hidden">
                         <div className={`p-4 ${isActive ? 'bg-green-50' : 'bg-gray-50'} border-b`}>
-                          <div className="flex justify-between items-center">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isActive ? 'bg-green-100' : 'bg-gray-200'}`}>
                                 <PlanIcon size={14} className={isActive ? 'text-green-600' : 'text-gray-500'} />
@@ -824,7 +824,7 @@ const handleAddCard = async () => {
                         </div>
                         
                         <div className="p-4">
-                          <div className="flex gap-4">
+                          <div className="flex flex-col sm:flex-row gap-4">
                             <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                               <img 
   src={sub.product?.images?.[0] || sub.productImage || '/api/placeholder/80/80'} 
@@ -863,7 +863,7 @@ const handleAddCard = async () => {
                           </div>
                           
                           {sub.status !== 'cancelled' && (
-                            <div className="flex gap-3 mt-4 pt-3 border-t">
+                           <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t">
                               {sub.status === 'active' ? (
                                 <button
                                   onClick={() => handlePauseSubscription(sub._id)}
@@ -893,7 +893,7 @@ const handleAddCard = async () => {
                               </button>
                               <Link
                                 to={`/product/${sub.product?._id}`}
-                                className="flex items-center gap-2 px-4 py-2 bg-maroon text-white rounded-lg text-sm font-medium hover:bg-maroon-light transition ml-auto"
+                                className="flex items-center gap-2 px-4 py-2 bg-maroon text-white rounded-lg text-sm font-medium hover:bg-maroon-light transition sm:ml-auto w-full sm:w-auto justify-center"
                               >
                                 <ShoppingBag size={14} />
                                 Shop Now
@@ -1097,7 +1097,7 @@ const handleAddCard = async () => {
 
           {activeSection === 'track' && (
             <div className="bg-white rounded-xl shadow-sm p-5">
-              <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Track Your Order</h1>
                 <Link to="/track" className="bg-maroon text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-maroon-light transition">
                   <Truck size={16} />
@@ -1111,7 +1111,7 @@ const handleAddCard = async () => {
                     <Search size={16} className="text-gray-500" />
                     Search by Order Number
                   </h3>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full">
   <input 
     type="text" 
     id="trackOrderNumber"
@@ -1139,7 +1139,7 @@ const handleAddCard = async () => {
                         return (
                           <div 
                             key={order._id} 
-                            className="flex justify-between items-center p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition"
+                            className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition"
                             onClick={() => window.location.href = `/track?order=${order.orderNumber}`}
                           >
                             <div className="flex items-center gap-3">

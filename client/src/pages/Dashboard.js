@@ -536,7 +536,7 @@ const handleAddCard = async () => {
           {activeSection === 'overview' && (
             <>
              <div className="bg-gradient-to-r from-maroon to-maroon-light rounded-xl p-5 text-white mb-6 overflow-hidden">
-                <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                       <Truck size={24} className="text-white" />
@@ -546,11 +546,11 @@ const handleAddCard = async () => {
                       <p className="text-sm text-white/80">Enter your order number to track delivery status</p>
                     </div>
                   </div>
-                <div className="flex gap-2 w-full">
+                <div className="flex gap-2 w-full sm:w-auto">
                     <input 
                       type="text" 
                       placeholder="Order number"
-                      className="px-4 py-2 rounded-lg text-gray-800 text-sm flex-1 sm:w-48"
+                      className="px-4 py-2 rounded-lg text-gray-800 text-sm flex-1 min-w-0"
                       id="quickTrackInput"
                     />
                     <button 

@@ -88,15 +88,24 @@ const { cartCount: cartTotal } = useCart();
               </span>
             )}
           </Link>
-          {isAuthenticated ? (
-            <button onClick={handleLogout} className="text-foreground">
-              <User className="h-5 w-5" />
-            </button>
-          ) : (
-            <Link to="/login">
-              <User className="h-5 w-5 text-foreground" />
-            </Link>
-          )}
+      {isAuthenticated ? (
+  <div className="relative group">
+    <User className="h-5 w-5 cursor-pointer" />
+    
+    <div className="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-lg hidden group-hover:block">
+      <Link to="/dashboard" className="block px-4 py-2 hover:bg-gray-100">
+        Dashboard
+      </Link>
+      <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100">
+        Logout
+      </button>
+    </div>
+  </div>
+) : (
+  <Link to="/login">
+    <User className="h-5 w-5" />
+  </Link>
+)}
           <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>

@@ -1111,7 +1111,7 @@ const handleAddCard = async () => {
                     <Search size={16} className="text-gray-500" />
                     Search by Order Number
                   </h3>
-                <div className="flex gap-2 w-full">
+               <div className="flex flex-col sm:flex-row gap-2 w-full">
   <input 
     type="text" 
     id="trackOrderNumber"
@@ -1120,7 +1120,7 @@ const handleAddCard = async () => {
   />
   <button 
     onClick={handleTrackSearch}
-    className="bg-maroon text-white px-3 py-2 rounded-lg text-sm hover:bg-maroon-light transition flex-shrink-0"
+    className="bg-maroon text-white px-3 py-2 rounded-lg text-sm hover:bg-maroon-light transition w-full sm:w-auto"
   >
     Track
   </button>
@@ -1151,7 +1151,7 @@ const handleAddCard = async () => {
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 sm:ml-auto">
                               <span className={`text-xs px-2 py-1 rounded-full ${ORDER_STATUS[order.status]?.bg} ${ORDER_STATUS[order.status]?.color}`}>
                                 {ORDER_STATUS[order.status]?.label}
                               </span>
